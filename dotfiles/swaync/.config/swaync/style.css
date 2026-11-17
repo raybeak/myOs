@@ -1,0 +1,52 @@
+/* ~/.config/swaync/style.css — no-glyph, monochrome matching waybar */
+
+* {
+    font-family: "Noto Sans Mono CJK KR", "Fira Code", monospace;
+    font-size: 20px;
+    border-radius: 0;
+}
+
+.notification-row {
+    outline: none;
+}
+
+.notification {
+    background: #111111;
+    color: #dddddd;
+    border: 1px solid #444444;
+    padding: 8px;
+    margin: 4px;
+}
+
+.notification.critical {
+    border-color: #ff5555;
+}
+
+.summary {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.body {
+    color: #cccccc;
+}
+
+.control-center {
+    background: #111111;
+    color: #dddddd;
+    border: 1px solid #444444;
+}
+
+.widget-title > button,
+.close-button {
+    background: #222222;
+    color: #dddddd;
+    border: 1px solid #444444;
+    padding: 2px 6px;
+}
+
+.widget-title > button:hover,
+.close-button:hover {
+    background: #dddddd;
+    color: #111111;
+}

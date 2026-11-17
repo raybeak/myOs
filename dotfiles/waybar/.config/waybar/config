@@ -1,0 +1,78 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 32,
+    "spacing": 0,
+
+    "modules-left": ["sway/workspaces", "sway/mode"],
+    "modules-center": [],
+    "modules-right": ["custom/sec", "clock", "bluetooth", "backlight", "pulseaudio", "battery", "custom/power"],
+
+    "sway/workspaces": {
+        "disable-scroll": true,
+        "format": "{name}"
+    },
+
+    "sway/mode": {
+        "format": "[{}]"
+    },
+
+    "custom/sec": {
+        "exec": "~/myOs/sweeper/waybar/secStatus.sh",
+        "return-type": "json",
+        "interval": 60,
+        "on-click": "foot -e sh -c '~/myOs/sweeper/myosSweeper status; read -r _'",
+        "tooltip": false
+    },
+
+    "clock": {
+        "interval": 30,
+        "format": "{:%Y-%m-%d %H:%M}",
+        "tooltip": false
+    },
+
+    "bluetooth": {
+        "format": "BT: {status}",
+        "format-connected": "BT: {device_alias}",
+        "format-off": "BT: OFF",
+        "on-click": "foot -e sh -c 'command -v bluetui >/dev/null && exec bluetui || exec bluetoothctl'",
+        "on-click-right": "bluetoothctl power $(bluetoothctl show | grep -q 'Powered: yes' && echo off || echo on)",
+        "tooltip": false
+    },
+
+    "backlight": {
+        "format": "BRI: {percent}%",
+        "on-scroll-up": "brightnessctl set 5%+",
+        "on-scroll-down": "brightnessctl set 5%-",
+        "tooltip": false
+    },
+
+    "pulseaudio": {
+        "format": "VOL: {volume}%",
+        "format-muted": "VOL: MUTE",
+        "format-bluetooth": "VOL: {volume}% BT",
+        "scroll-step": 5,
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-click-right": "pavucontrol",
+        "tooltip": false
+    },
+
+    "battery": {
+        "interval": 30,
+        "states": {
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "BAT: {capacity}%",
+        "format-charging": "BAT: {capacity}% CHG",
+        "format-plugged": "BAT: {capacity}% AC",
+        "format-full": "BAT: {capacity}% FULL",
+        "tooltip": false
+    },
+
+    "custom/power": {
+        "format": "[PWR]",
+        "on-click": "~/.config/sway/scripts/power.sh",
+        "tooltip": false
+    }
+}

@@ -1,0 +1,13 @@
+[Default Applications]
+text/html=brave-browser.desktop
+x-scheme-handler/http=brave-browser.desktop
+x-scheme-handler/https=brave-browser.desktop
+x-scheme-handler/about=brave-browser.desktop
+x-scheme-handler/unknown=brave-browser.desktop
+x-scheme-handler/arduino-app-lab=arduino-app-lab.desktop
+audio/mpeg=com.brave.Browser.desktop
+application/octet-stream=org.codeberg.dnkl.foot.desktop
+
+[Added Associations]
+audio/mpeg=com.brave.Browser.desktop;
+application/octet-stream=org.codeberg.dnkl.foot.desktop;

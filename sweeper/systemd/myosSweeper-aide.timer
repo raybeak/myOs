@@ -1,0 +1,9 @@
+[Unit]
+Description=Run MyOS Daily AIDE Check
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

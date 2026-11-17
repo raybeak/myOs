@@ -1,0 +1,6 @@
+[Unit]
+Description=Alert on MyOS Sweeper failure (%i)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemd-run --user --machine=raybeak@.host --wait --collect /usr/bin/notify-send -u critical "[SEC: SWEEPER FAILED]" "Unit %i failed. Check journalctl -u %i"

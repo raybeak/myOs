@@ -1,0 +1,6 @@
+[terminal]
+vt = 7
+
+[default_session]
+command = "sh -c 'BAT=$(acpi -b 2>/dev/null | cut -d, -f2- | xargs); exec env TZ=Asia/Seoul /usr/bin/tuigreet --greeting \"BAT: ${BAT:-N/A}\" --time --asterisks --cmd sway'"
+user = "_greetd"

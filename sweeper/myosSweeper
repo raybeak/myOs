@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONF_FILE="${MYOS_SWEEPER_CONF:-$SCRIPT_DIR/sweeper.conf}"
+if [[ -f "$CONF_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$CONF_FILE"
+fi
+
+STATE_DIR="${STATE_DIR:-/var/lib/myosSweeper}"
+LOG_DIR="${LOG_DIR:-/var/log/myosSweeper}"
+RUN_DIR="${RUN_DIR:-/run/myosSweeper}"
+ROOT_PREFIX="${ROOT_PREFIX:-/}"
+NO_NOTIFY="${NO_NOTIFY:-false}"
+NO_GPG="${NO_GPG:-false}"
+
+sign_baseline() {
+    local baseline="$STATE_DIR/baseline.json"
+    local sig="$STATE_DIR/baseline.json.asc"
+    if [[ "$NO_GPG" == "true" ]]; then
+        echo "MOCK_GPG_SIG" > "$sig"
+        return 0
+    fi
+    local gpg_args=(--batch --yes --detach-sign --armor)
+    if [[ -n "${SIGNING_KEY_ID:-}" ]]; then
+        gpg_args+=(-u "$SIGNING_KEY_ID")
+    fi
+    gpg "${gpg_args[@]}" -o "$sig" "$baseline"
+}
+
+cmd_init_baseline() {
+    mkdir -p "$STATE_DIR" "$RUN_DIR" "$LOG_DIR"
+    python3 "$SCRIPT_DIR/collectDelta.py" \
+        --root "$ROOT_PREFIX" \
+        --state-dir "$STATE_DIR" \
+        --run-dir "$RUN_DIR" \
+        --allowed-ports "${ALLOWED_EXTERNAL_PORTS:-41641}" \
+        --write-baseline
+    sign_baseline
+    : > "$STATE_DIR/pending.jsonl"
+    printf '{"timestamp": %d, "status": "OK", "code": 0, "hasPending": false}\n' "$(date +%s)" > "$STATE_DIR/state.json"
+    echo "[OK] Baseline initialized and signed at $STATE_DIR/baseline.json.asc"
+}
+
+cmd_run() {
+    mkdir -p "$STATE_DIR" "$RUN_DIR" "$LOG_DIR"
+    python3 "$SCRIPT_DIR/collectDelta.py" \
+        --root "$ROOT_PREFIX" \
+        --state-dir "$STATE_DIR" \
+        --run-dir "$RUN_DIR" \
+        --manifest "${MANIFEST_PATH:-/opt/myosSweeper/manifest.sha256}" \
+        --keyring "${TRUSTED_KEYRING:-/etc/myosSweeper/trustedkey.gpg}" \
+        --allowed-ports "${ALLOWED_EXTERNAL_PORTS:-41641}" >/dev/null
+
+    python3 "$SCRIPT_DIR/runJev.py" \
+        --features "$RUN_DIR/features.json" \
+        --output "$RUN_DIR/decision.json" \
+        --llama-bin "${LLAMA_BIN:-/opt/myosSweeper/bin/llama-cli}" \
+        --model "${MODEL_PATH:-/opt/myosSweeper/models/qwen2.5-1.5b-instruct-q4_k_m.gguf}" \
+        --model-sha256 "${MODEL_SHA256:-}" >/dev/null
+
+    local esc_args=(
+        --features "$RUN_DIR/features.json"
+        --decision "$RUN_DIR/decision.json"
+        --state-dir "$STATE_DIR"
+        --log-dir "$LOG_DIR"
+        --desktop-endpoint "${DESKTOP_ENDPOINT:-}"
+        --desktop-token-file "${DESKTOP_TOKEN_FILE:-/etc/myosSweeper/desktop.token}"
+    )
+    if [[ "$NO_NOTIFY" == "true" ]]; then
+        esc_args+=(--no-notify)
+    fi
+    python3 "$SCRIPT_DIR/escalateAndAlert.py" "${esc_args[@]}"
+}
+
+cmd_ack() {
+    if [[ ! -f "$STATE_DIR/baseline.json" ]]; then
+        echo "[ERR] No baseline found. Run init-baseline first." >&2
+        exit 1
+    fi
+    cmd_init_baseline
+    echo "[OK] Pending alerts cleared and baseline re-signed."
+}
+
+cmd_status() {
+    if [[ -f "$STATE_DIR/state.json" ]]; then
+        cat "$STATE_DIR/state.json"
+    else
+        echo '{"status": "UNINITIALIZED"}'
+    fi
+    if [[ -s "$STATE_DIR/pending.jsonl" ]]; then
+        echo "--- Pending Alerts ---"
+        cat "$STATE_DIR/pending.jsonl"
+    fi
+}
+
+case "${1:-}" in
+    init-baseline) cmd_init_baseline ;;
+    run)           cmd_run ;;
+    ack)           cmd_ack ;;
+    status)        cmd_status ;;
+    *)
+        echo "Usage: $0 {init-baseline|run|ack|status}" >&2
+        exit 2
+        ;;
+esac

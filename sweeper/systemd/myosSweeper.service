@@ -1,0 +1,19 @@
+[Unit]
+Description=MyOS Hybrid Cybersec Sweeper (4h Delta + Local Open-Jev)
+After=network-online.target
+OnFailure=myosSweeper-alert@%n.service
+
+[Service]
+Type=oneshot
+Nice=15
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_DAC_READ_SEARCH
+PrivateTmp=no
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=/var/lib/myosSweeper /var/log/myosSweeper /run/myosSweeper
+RuntimeDirectory=myosSweeper
+ExecStart=/opt/myosSweeper/myosSweeper run
+
+[Install]
+WantedBy=multi-user.target

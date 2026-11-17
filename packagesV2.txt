@@ -1,0 +1,142 @@
+# MyOS packages.txt — Ubuntu Server 26.04 LTS / LG gram 16ZD90P (Tiger Lake, Iris Xe, 8GB)
+# '#' 줄과 빈 줄은 bootstrap이 무시함
+# ubuntu-server 기본 설치에 포함된 base package는 뺐음
+# 원칙: 8GB RAM -> KDE/무거운 의존성 금지
+
+# --- desktop: sway ---
+sway
+swaybg
+swayidle
+swaylock
+waybar
+sway-notification-center
+wofi
+foot
+xwayland
+greetd
+tuigreet
+# seatd: logind로 충분한지 VM에서 먼저 테스트. Sway가 안 뜨면 주석 해제
+# seatd
+
+# --- portal / session ---
+xdg-desktop-portal
+xdg-desktop-portal-wlr
+xdg-desktop-portal-gtk
+xdg-utils
+dbus-user-session
+x11-utils
+lxqt-policykit
+
+# --- keyring / ssh / javacard (Gate 1: passive runtime only) ---
+gnupg
+pinentry-qt
+gnome-keyring
+libsecret-tools
+pcscd
+libccid
+pcsc-tools
+opensc
+scdaemon
+libpam-ssh-agent-auth
+
+# --- audio ---
+firmware-sof-signed
+pipewire
+pipewire-pulse
+wireplumber
+pulseaudio-utils
+pavucontrol
+playerctl
+
+# --- power / thermal / memory ---
+brightnessctl
+wlsunset
+tlp
+tlp-rdw
+thermald
+acpi
+systemd-zram-generator
+
+# --- intel gpu (Iris Xe) ---
+intel-microcode
+intel-media-va-driver
+intel-gpu-tools
+mesa-vulkan-drivers
+libvulkan1
+
+# --- network / bluetooth ---
+network-manager
+bluez
+nmap
+arp-scan
+
+# --- screenshot / clipboard ---
+grim
+slurp
+wl-clipboard
+
+# --- 한글 ---
+language-pack-ko
+fcitx5
+fcitx5-hangul
+fcitx5-config-qt
+fcitx5-frontend-gtk3
+fcitx5-frontend-gtk4
+fcitx5-frontend-qt5
+fcitx5-frontend-qt6
+
+# --- fonts ---
+fonts-noto
+fonts-noto-cjk
+fonts-firacode
+
+# --- codec (ubuntu-restricted-extras 대체, EULA 없음) ---
+ffmpeg
+libavcodec-extra
+
+# --- editor / cli ---
+micro
+neovim
+git
+stow
+ripgrep
+fd-find
+fzf
+bat
+btop
+fastfetch
+unzip
+curl
+pciutils
+usbutils
+
+# --- dev ---
+build-essential
+pkg-config
+libdbus-1-dev
+python3-pip
+python3-venv
+npm
+adb
+fastboot
+
+# --- apps ---
+thunar
+zathura
+rpi-imager
+
+# --- AppImage 실행용 ---
+libfuse2t64
+libwebkit2gtk-4.1-0
+
+# 제외한 것 (기록용)
+# calligrawords        KDE 의존성
+# polkit-kde-agent-1   -> lxqt-policykit
+# ubuntu-restricted-extras -> ffmpeg + libavcodec-extra
+# dbus-x11             레거시. XWayland 앱 문제 생기면 다시 추가
+# mako-notifier        -> swaync
+# fonts-font-awesome   no-glyph 원칙
+# wlogout              no-glyph 원칙
+# nm-tray              COA 2: nmtui/nmcli 대체
+# remmina              COA 2: SSH/Tailscale 대체
+# tigervnc-viewer      COA 2: SSH/Tailscale 대체

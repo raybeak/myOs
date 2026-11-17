@@ -1,0 +1,59 @@
+# MyOS services.txt — bootstrap용
+# 형식: <scope> <action> <unit>   /   group <name>
+
+# --- system ---
+system enable  greetd.service
+system enable  NetworkManager.service
+system enable  bluetooth.service
+system enable  pcscd.socket
+system enable  tlp.service
+system enable  thermald.service
+system enable  tailscaled.service
+# docker: 상시 실행 X, 쓸 때만 socket으로 기동 (8GB 대응)
+system disable docker.service
+system enable  docker.socket
+# seatd 쓰기로 하면 주석 해제
+# system enable seatd.service
+
+# --- user ---
+user enable  pipewire.socket
+user enable  pipewire-pulse.socket
+user enable  wireplumber.service
+user enable  swaync.service
+user disable waybar.service
+user enable  gpg-agent-ssh.socket
+user disable gcr-ssh-agent.socket
+user disable gcr-ssh-agent.service
+# clika: 메모리 사용량 btop으로 확인 후 상시 필요하면 enable
+# user enable clika-runtime-agent.service
+
+# --- groups ---
+# 기준: 지금 laptop에서 `groups` 출력 그대로 복제 (Arduino/ESP32/EEG 시리얼용 dialout 필수)
+group dialout
+
+# --- network 전환: 반드시 bootstrap 맨 마지막 단계 ---
+# 1. /etc/netplan/50-cloud-init.yaml -> ~/myos-backup/ 로 이동
+# 2. etc/netplan/01-nm.yaml 복사 (chmod 600)
+# 3. netplan apply
+# 4. system disable systemd-networkd.service systemd-networkd.socket
+#    systemd-networkd-wait-online.service networkd-dispatcher.service
+
+# --- 같이 준비할 설정 파일 (repo의 etc/ 와 dotfiles/) ---
+# etc/netplan/01-nm.yaml
+#     network:
+#       version: 2
+#       renderer: NetworkManager
+# etc/systemd/zram-generator.conf
+#     [zram0]
+#     zram-size = ram / 2
+#     compression-algorithm = zstd
+# etc/tlp.d/90-gram.conf
+#     STOP_CHARGE_THRESH_BAT0="1"     # LG: 1 = 80% 충전 제한
+# dotfiles/gnupg/.gnupg/gpg-agent.conf
+#     enable-ssh-support
+#     pinentry-program /usr/bin/pinentry-qt
+# dotfiles/shell/.profile 에 추가
+#     export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
+# dotfiles/sway/.config/sway/config 에 있는지 확인
+#     exec systemctl --user import-environment WAYLAND_DISPLAY SWAYSOCK
+#     include /etc/sway/config.d/*

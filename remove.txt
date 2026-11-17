@@ -1,0 +1,9 @@
+# MyOS remove.txt — 새로 설치 직후 purge
+snapd
+cloud-init
+open-vm-tools
+lxd-installer
+modemmanager
+# 안전장치 (원래 안 깔리지만 혹시 딸려오면)
+mako-notifier
+pulseaudio

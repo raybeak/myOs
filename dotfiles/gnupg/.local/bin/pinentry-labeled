@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""Assuan proxy around pinentry-qt that sets an explicit window title per key/PIN type."""
+import subprocess
+import sys
+
+
+def classify_title(desc: str) -> str:
+    if "Admin PIN" in desc:
+        return "[ADMIN PIN - 12 chars] JavaCard 02627809"
+    if "PIN" in desc or "02627809" in desc:
+        return "[USER PIN - 6 digits] JavaCard 02627809"
+    if "4BF8329DC5E9F845" in desc:
+        return "[MASTER KEY] 4BF8329DC5E9F845"
+    if "myosSweeper" in desc or "F7E73553ADCE4EC4" in desc or "6C7FFF03BBDFDCDC" in desc:
+        return "[FALLBACK KEY] myosSweeper"
+    return "[USB / SYMMETRIC PASSPHRASE]"
+
+
+def relay_response(proc: subprocess.Popen, forward: bool = True) -> None:
+    while True:
+        resp = proc.stdout.readline()
+        if not resp:
+            break
+        if forward:
+            sys.stdout.write(resp)
+            sys.stdout.flush()
+        if resp.startswith(("OK", "ERR")):
+            break
+
+
+def main() -> int:
+    proc = subprocess.Popen(
+        ["/usr/bin/pinentry-qt", *sys.argv[1:]],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+    greeting = proc.stdout.readline()
+    sys.stdout.write(greeting)
+    sys.stdout.flush()
+
+    for line in sys.stdin:
+        if line.startswith("SETTITLE "):
+            sys.stdout.write("OK\n")
+            sys.stdout.flush()
+            continue
+
+        proc.stdin.write(line)
+        proc.stdin.flush()
+        relay_response(proc, forward=True)
+
+        if line.startswith("SETDESC "):
+            title = classify_title(line[8:])
+            proc.stdin.write(f"SETTITLE {title}\n")
+            proc.stdin.flush()
+            relay_response(proc, forward=False)
+
+        if line.strip() == "BYE":
+            break
+
+    proc.wait()
+    return proc.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
