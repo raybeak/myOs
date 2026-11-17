@@ -66,6 +66,7 @@ libvulkan1
 
 # --- network / bluetooth ---
 network-manager
+ufw
 bluez
 nmap
 arp-scan

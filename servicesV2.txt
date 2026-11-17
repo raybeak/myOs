@@ -4,6 +4,8 @@
 # --- system ---
 system enable  greetd.service
 system enable  NetworkManager.service
+system enable  ufw.service
+system disable postfix.service
 system enable  bluetooth.service
 system enable  pcscd.socket
 system enable  tlp.service
