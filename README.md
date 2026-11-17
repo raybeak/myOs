@@ -76,6 +76,14 @@ sudo reboot
 - `sweeper/`: Standalone `/` security delta collector, rule floor, local/Tailscale triage, and `systemd` timers.
 - `gate2JavaCardStarter.md` / `gate3SweeperStarter.md`: Module setup & operational guides.
 
+### Workspace `.env` Helpers (`env*`)
+
+Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encryption using `~/.config/myos/gpg-recipients`, resolving `./.env.gpg` first and falling back to `~/workspace/.env.gpg`):
+
+- `envlock [src] [dst]`: Encrypts a plaintext `.env` file into `.env.gpg` for both the JavaCard key and offline/fallback key (`envlock /dev/shm/.env ~/workspace/.env.gpg` recommended to keep plaintext off NVMe).
+- `envview [src]`: Decrypts `.env.gpg` directly to stdout without writing plaintext to disk.
+- `envrun <command> [args...]`: Decrypts `.env.gpg` in memory and injects variables into an isolated subshell for `<command>` (`ENV_GPG_FILE` overrides path).
+
 ---
 
 ## Updates
