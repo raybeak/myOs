@@ -39,7 +39,7 @@ if [ -d "$HOME/.local/bin" ]; then
 fi
 export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
 
-if [ -f "$HOME/.config/myos/env-helpers.sh" ]; then
+if [ -n "${BASH_VERSION:-}" ] && [ -f "$HOME/.config/myos/env-helpers.sh" ]; then
     . "$HOME/.config/myos/env-helpers.sh"
 fi
 
