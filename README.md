@@ -80,6 +80,7 @@ sudo reboot
 
 ## Updates
 
+- `fix(shell): guard bash-only env-helpers.sh in .profile for dash/tuigreet`; `2026-11-17 17:41 KST`
 - `chore(repo): untrack compiled __pycache__ bytecode`; `2026-11-17 16:51 KST`
 - `feat(gnupg): add pinentry-labeled wrapper for explicit PIN/key titles`; `2026-11-17 16:50 KST`
 - `feat(auth): integrate JavaCard SmartPGP, sudo-rs PAM, and .env GPG helpers`; `2026-11-17 16:48 KST`
