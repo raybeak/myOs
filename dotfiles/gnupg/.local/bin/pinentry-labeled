@@ -5,6 +5,8 @@ import sys
 
 
 def classify_title(desc: str) -> str:
+    if "confirm" in desc.lower():
+        return "[CONFIRM AUTH] JavaCard 02627809"
     if "Admin PIN" in desc:
         return "[ADMIN PIN - 12 chars] JavaCard 02627809"
     if "PIN" in desc or "02627809" in desc:

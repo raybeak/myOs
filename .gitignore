@@ -10,6 +10,7 @@ javaCardInfo.txt
 dotfiles/gnupg/.gnupg/*
 !dotfiles/gnupg/.gnupg/gpg-agent.conf
 !dotfiles/gnupg/.gnupg/scdaemon.conf
+!dotfiles/gnupg/.gnupg/sshcontrol
 dotfiles/misc/.gemini/
 dotfiles/foot/foot.ini
 dotfiles/systemd/.config/systemd/user/*.wants/

@@ -90,6 +90,10 @@ if [[ -d "$REPO_DIR/dotfiles" ]]; then
         if [[ "$pkg" == "gnupg" ]]; then
             run_cmd mkdir -p -m 700 "$TARGET_HOME/.gnupg"
             run_cmd chown "$TARGET_USER:$TARGET_USER" "$TARGET_HOME/.gnupg"
+            if [[ -f "$TARGET_HOME/.gnupg/sshcontrol" && ! -L "$TARGET_HOME/.gnupg/sshcontrol" ]]; then
+                run_cmd mkdir -p "$TARGET_HOME/myos-backup"
+                run_cmd mv "$TARGET_HOME/.gnupg/sshcontrol" "$TARGET_HOME/myos-backup/sshcontrol.orig"
+            fi
             run_cmd stow --no-folding --restow -d "$REPO_DIR/dotfiles" -t "$TARGET_HOME" "$pkg"
         else
             run_cmd stow --restow -d "$REPO_DIR/dotfiles" -t "$TARGET_HOME" "$pkg"
@@ -119,6 +123,31 @@ if [[ -f "$REPO_DIR/etc/security/authorized_keys" ]]; then
         fi
     done
 fi
+if [[ -f "$REPO_DIR/etc/ssh/sshd_config.d/01-hardening.conf" ]] && command -v sshd >/dev/null 2>&1; then
+    if [[ -n "${SSH_CONNECTION:-}" ]]; then
+        echo "[WARN] Running over SSH; skipping SSHD hardening cutover (intended for local laptop console only)."
+    else
+        run_cmd sudo install -Dm644 "$REPO_DIR/etc/ssh/sshd_config.d/01-hardening.conf" /etc/ssh/sshd_config.d/01-hardening.conf
+        run_cmd sudo sshd -t
+        if systemctl is-active --quiet ssh.service; then
+            run_cmd sudo systemctl reload ssh.service
+        fi
+    fi
+fi
+if [[ -f "$REPO_DIR/etc/sysctl.d/99-hardening.conf" ]]; then
+    run_cmd sudo install -Dm644 "$REPO_DIR/etc/sysctl.d/99-hardening.conf" /etc/sysctl.d/99-hardening.conf
+    run_cmd sudo sysctl -e -p /etc/sysctl.d/99-hardening.conf || true
+fi
+if command -v ufw >/dev/null 2>&1; then
+    if [[ -n "${SSH_CONNECTION:-}" ]]; then
+        echo "[WARN] Running over SSH; skipping UFW baseline cutover (intended for local laptop console only)."
+    else
+        run_cmd sudo ufw default deny incoming
+        run_cmd sudo ufw default allow outgoing
+        run_cmd sudo ufw allow 41641/udp comment "Tailscale"
+        run_cmd sudo ufw --force enable
+    fi
+fi
 
 echo "=== [6/8] Applying services & groups (servicesV2.txt) ==="
 if [[ -f "$REPO_DIR/servicesV2.txt" ]]; then
@@ -132,6 +161,11 @@ if [[ -f "$REPO_DIR/servicesV2.txt" ]]; then
             user:enable)    run_cmd systemctl --user enable "$unit" || true ;;
             user:disable)   run_cmd systemctl --user disable "$unit" || true ;;
             group:*)        run_cmd sudo usermod -aG "$action" "$TARGET_USER" ;;
+            group-remove:*)
+                if id -nG "$TARGET_USER" | grep -qw "$action"; then
+                    run_cmd sudo gpasswd -d "$TARGET_USER" "$action" || true
+                fi
+                ;;
         esac
     done < "$REPO_DIR/servicesV2.txt"
 fi

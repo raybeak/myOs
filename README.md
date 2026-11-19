@@ -59,6 +59,8 @@ flowchart TD
 
 ## Quick Start (Fresh Ubuntu Server 26.04 LTS Minimal)
 
+> **Intended Use**: `myOs` is designed **exclusively for local, laptop-on-hand (physical console) deployment** — **not** for remote/headless SSH stands. `bootstrap.sh` enforces a strict laptop-first security posture (`UFW` default-deny inbound allowing only `41641/udp` Tailscale, `SSHD` `PasswordAuthentication no`, `NetworkManager` netplan cutover, and Wayland `pinentry-labeled` confirmation for JavaCard `sudo`/SSH auth). If invoked over an active `SSH_CONNECTION`, lockout-prone `SSHD` and `UFW` cutover steps are automatically skipped with a warning.
+
 ```bash
 sudo apt update && sudo apt install -y git
 git clone https://github.com/raybeak/myOs.git ~/myOs
@@ -70,9 +72,9 @@ sudo reboot
 
 ### Repository Structure
 
-- `bootstrap.sh`: Idempotent 8-stage installer (`remove.txt` -> `packagesV2.txt` -> external tools -> `stow` -> `/etc` -> `servicesV2.txt` -> `micro` default -> `NetworkManager` cutover).
+- `bootstrap.sh`: Idempotent 8-stage installer (`remove.txt` -> `packagesV2.txt` -> external tools -> `stow` -> `/etc` & `UFW` baseline -> `servicesV2.txt` -> `micro` default -> `NetworkManager` cutover).
 - `dotfiles/`: GNU `stow` packages (`sway`, `waybar`, `swaync`, `foot`, `micro`, `fcitx5`, `gnupg` with `--no-folding`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0`).
-- `etc/`: System configs (`greetd/config.toml`, `netplan/01-nm.yaml`, `systemd/zram-generator.conf`, `tlp.d/90-gram.conf`, `sudoers.d/ssh-agent`, `security/authorized_keys`).
+- `etc/`: System configs (`greetd/config.toml`, `netplan/01-nm.yaml`, `systemd/zram-generator.conf`, `tlp.d/90-gram.conf`, `sudoers.d/ssh-agent`, `security/authorized_keys`, `ssh/sshd_config.d/01-hardening.conf`, `sysctl.d/99-hardening.conf`).
 - `sweeper/`: Standalone `/` security delta collector, rule floor, local/Tailscale triage, and `systemd` timers.
 - `gate2JavaCardStarter.md` / `gate3SweeperStarter.md`: Module setup & operational guides.
 
@@ -88,6 +90,7 @@ Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encr
 
 ## Updates
 
+- `feat(hardening): add reproducible laptop-only SSHD, sysctl, UFW, and JavaCard confirm baseline`; `2026-11-19 10:18 KST`
 - `fix(shell): guard bash-only env-helpers.sh in .profile for dash/tuigreet`; `2026-11-17 17:41 KST`
 - `chore(repo): untrack compiled __pycache__ bytecode`; `2026-11-17 16:51 KST`
 - `feat(gnupg): add pinentry-labeled wrapper for explicit PIN/key titles`; `2026-11-17 16:50 KST`

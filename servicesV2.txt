@@ -14,6 +14,12 @@ system enable  tailscaled.service
 # docker: 상시 실행 X, 쓸 때만 socket으로 기동 (8GB 대응)
 system disable docker.service
 system enable  docker.socket
+# hardening: 랩톱 불필요 서버/크래시 데몬 비활성화
+system disable open-iscsi.service
+system disable multipathd.service
+system disable kdump-tools.service
+system disable apport.service
+system disable landscape-client.service
 # seatd 쓰기로 하면 주석 해제
 # system enable seatd.service
 
@@ -32,6 +38,8 @@ user disable gcr-ssh-agent.service
 # --- groups ---
 # 기준: 지금 laptop에서 `groups` 출력 그대로 복제 (Arduino/ESP32/EEG 시리얼용 dialout 필수)
 group dialout
+# hardening: 미사용 LXD root-equivalent 그룹 제거
+group-remove lxd
 
 # --- network 전환: 반드시 bootstrap 맨 마지막 단계 ---
 # 1. /etc/netplan/50-cloud-init.yaml -> ~/myos-backup/ 로 이동
