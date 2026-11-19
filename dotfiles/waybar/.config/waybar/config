@@ -6,7 +6,7 @@
 
     "modules-left": ["sway/workspaces", "sway/mode"],
     "modules-center": [],
-    "modules-right": ["custom/sec", "clock", "bluetooth", "backlight", "pulseaudio", "battery", "custom/power"],
+    "modules-right": ["custom/sec", "custom/net", "clock", "bluetooth", "backlight", "pulseaudio", "battery", "custom/power"],
 
     "sway/workspaces": {
         "disable-scroll": true,
@@ -18,10 +18,18 @@
     },
 
     "custom/sec": {
-        "exec": "~/myOs/sweeper/waybar/secStatus.sh",
+        "exec": "/opt/myosSweeper/waybar/secStatus.sh",
         "return-type": "json",
         "interval": 60,
-        "on-click": "foot -e sh -c '~/myOs/sweeper/myosSweeper status; read -r _'",
+        "on-click": "foot -e sh -c '/opt/myosSweeper/myosSweeper status; read -r _'",
+        "tooltip": false
+    },
+
+    "custom/net": {
+        "exec": "~/.config/waybar/netServices.sh",
+        "return-type": "json",
+        "interval": 15,
+        "on-click": "~/.config/waybar/netServices.sh --menu",
         "tooltip": false
     },
 

@@ -6,6 +6,8 @@ OnFailure=myosSweeper-alert@%n.service
 [Service]
 Type=oneshot
 Nice=15
+MemoryMax=1500M
+CPUQuota=50%
 CapabilityBoundingSet=CAP_DAC_READ_SEARCH
 AmbientCapabilities=CAP_DAC_READ_SEARCH
 PrivateTmp=no

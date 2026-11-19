@@ -95,6 +95,8 @@ if [[ -d "$REPO_DIR/dotfiles" ]]; then
                 run_cmd mv "$TARGET_HOME/.gnupg/sshcontrol" "$TARGET_HOME/myos-backup/sshcontrol.orig"
             fi
             run_cmd stow --no-folding --restow -d "$REPO_DIR/dotfiles" -t "$TARGET_HOME" "$pkg"
+        elif [[ "$pkg" =~ ^(micro|btop|Thunar|misc)$ ]]; then
+            run_cmd stow --no-folding --restow -d "$REPO_DIR/dotfiles" -t "$TARGET_HOME" "$pkg"
         else
             run_cmd stow --restow -d "$REPO_DIR/dotfiles" -t "$TARGET_HOME" "$pkg"
         fi
@@ -123,10 +125,46 @@ if [[ -f "$REPO_DIR/etc/security/authorized_keys" ]]; then
         fi
     done
 fi
+if [[ -f "$REPO_DIR/dotfiles/gnupg/.local/bin/pinentry-labeled" ]]; then
+    run_cmd sudo install -Dm755 -o root -g root "$REPO_DIR/dotfiles/gnupg/.local/bin/pinentry-labeled" /usr/local/bin/pinentry-labeled
+fi
+if [[ -f "$REPO_DIR/etc/security/limits.d/99-no-coredump.conf" ]]; then
+    run_cmd sudo install -Dm644 "$REPO_DIR/etc/security/limits.d/99-no-coredump.conf" /etc/security/limits.d/99-no-coredump.conf
+fi
+if [[ -f "$REPO_DIR/etc/systemd/resolved.conf.d/99-dot.conf" ]]; then
+    run_cmd sudo install -Dm644 "$REPO_DIR/etc/systemd/resolved.conf.d/99-dot.conf" /etc/systemd/resolved.conf.d/99-dot.conf
+    run_cmd sudo systemctl restart systemd-resolved || true
+fi
+if [[ -f "$REPO_DIR/etc/NetworkManager/conf.d/99-mac-rand.conf" ]]; then
+    run_cmd sudo install -Dm644 "$REPO_DIR/etc/NetworkManager/conf.d/99-mac-rand.conf" /etc/NetworkManager/conf.d/99-mac-rand.conf
+fi
+if [[ -f "$REPO_DIR/etc/docker/daemon.json" ]]; then
+    run_cmd sudo install -Dm644 "$REPO_DIR/etc/docker/daemon.json" /etc/docker/daemon.json
+fi
+if [[ -f "$REPO_DIR/etc/systemd/journald.conf.d/99-hardening.conf" ]]; then
+    run_cmd sudo install -Dm644 "$REPO_DIR/etc/systemd/journald.conf.d/99-hardening.conf" /etc/systemd/journald.conf.d/99-hardening.conf
+    run_cmd sudo systemctl restart systemd-journald || true
+fi
+if [[ -f "$REPO_DIR/etc/audit/rules.d/99-myos.rules" ]]; then
+    run_cmd sudo install -Dm640 "$REPO_DIR/etc/audit/rules.d/99-myos.rules" /etc/audit/rules.d/99-myos.rules
+    if command -v augenrules >/dev/null 2>&1; then
+        run_cmd sudo augenrules --load || true
+    fi
+fi
+if [[ -f /etc/apparmor.d/brave && -f /etc/apparmor.d/brave-browser-stable ]]; then
+    run_cmd sudo mkdir -p /etc/apparmor.d/disable
+    run_cmd sudo ln -sf /etc/apparmor.d/brave /etc/apparmor.d/disable/brave
+    run_cmd sudo apparmor_parser -R /etc/apparmor.d/brave || true
+    run_cmd sudo systemctl reload apparmor || true
+fi
+if [[ -f /etc/bluetooth/main.conf ]] && ! grep -q "^AutoEnable=false" /etc/bluetooth/main.conf; then
+    run_cmd sudo sed -i 's/^#AutoEnable=.*/AutoEnable=false/' /etc/bluetooth/main.conf
+fi
 if [[ -f "$REPO_DIR/etc/ssh/sshd_config.d/01-hardening.conf" ]] && command -v sshd >/dev/null 2>&1; then
     if [[ -n "${SSH_CONNECTION:-}" ]]; then
         echo "[WARN] Running over SSH; skipping SSHD hardening cutover (intended for local laptop console only)."
     else
+        run_cmd sudo rm -f /etc/ssh/sshd_config.d/50-cloud-init.conf
         run_cmd sudo install -Dm644 "$REPO_DIR/etc/ssh/sshd_config.d/01-hardening.conf" /etc/ssh/sshd_config.d/01-hardening.conf
         run_cmd sudo sshd -t
         if systemctl is-active --quiet ssh.service; then
@@ -144,9 +182,14 @@ if command -v ufw >/dev/null 2>&1; then
     else
         run_cmd sudo ufw default deny incoming
         run_cmd sudo ufw default allow outgoing
-        run_cmd sudo ufw allow 41641/udp comment "Tailscale"
         run_cmd sudo ufw --force enable
     fi
+fi
+if command -v usbguard >/dev/null 2>&1; then
+    if [[ ! -s /etc/usbguard/rules.conf ]]; then
+        run_cmd sudo bash -c 'usbguard generate-policy > /etc/usbguard/rules.conf && chmod 600 /etc/usbguard/rules.conf'
+    fi
+    run_cmd sudo systemctl enable --now usbguard.service || true
 fi
 
 echo "=== [6/8] Applying services & groups (servicesV2.txt) ==="

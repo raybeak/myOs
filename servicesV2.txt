@@ -10,7 +10,14 @@ system enable  bluetooth.service
 system enable  pcscd.socket
 system enable  tlp.service
 system enable  thermald.service
-system enable  tailscaled.service
+system enable  auditd.service
+# tailscaled / ssh / avahi: 기본 비활성화 (Waybar [NET: LOCK] GUI에서 1-클릭 토글)
+system disable tailscaled.service
+system disable ssh.socket
+system disable ssh.service
+system disable avahi-daemon.socket
+system disable avahi-daemon.service
+system disable dailyaidecheck.timer
 # docker: 상시 실행 X, 쓸 때만 socket으로 기동 (8GB 대응)
 system disable docker.service
 system enable  docker.socket
@@ -38,8 +45,9 @@ user disable gcr-ssh-agent.service
 # --- groups ---
 # 기준: 지금 laptop에서 `groups` 출력 그대로 복제 (Arduino/ESP32/EEG 시리얼용 dialout 필수)
 group dialout
-# hardening: 미사용 LXD root-equivalent 그룹 제거
+# hardening: 미사용 특권 그룹 제거 (lxd: root-equivalent, dip: SUID pppd)
 group-remove lxd
+group-remove dip
 
 # --- network 전환: 반드시 bootstrap 맨 마지막 단계 ---
 # 1. /etc/netplan/50-cloud-init.yaml -> ~/myos-backup/ 로 이동

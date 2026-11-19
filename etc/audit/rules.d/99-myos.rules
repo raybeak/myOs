@@ -1,0 +1,8 @@
+-w /etc/pam.d/ -p wa -k myos_priv
+-w /etc/sudoers -p wa -k myos_priv
+-w /etc/sudoers.d/ -p wa -k myos_priv
+-w /etc/security/authorized_keys -p wa -k myos_priv
+-w /etc/ld.so.preload -p wa -k myos_priv
+-w /etc/systemd/system/ -p wa -k myos_priv
+-w /home/raybeak/.gnupg/gpg-agent.conf -p wa -k myos_priv
+-w /home/raybeak/.gnupg/sshcontrol -p wa -k myos_priv

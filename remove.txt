@@ -7,3 +7,8 @@ modemmanager
 # 안전장치 (원래 안 깔리지만 혹시 딸려오면)
 mako-notifier
 pulseaudio
+postfix
+landscape-client
+xscreensaver
+xscreensaver-data
+xscreensaver-gl

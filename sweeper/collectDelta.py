@@ -18,16 +18,24 @@ CRITICAL_PRIV_FILES = [
     "/etc/shadow",
     "/etc/passwd",
     "/etc/group",
+    "/etc/security/authorized_keys",
+    "/etc/crontab",
+    "/home/raybeak/.gnupg/gpg-agent.conf",
+    "/home/raybeak/.gnupg/sshcontrol",
 ]
-CRITICAL_PRIV_DIRS = ["/etc/sudoers.d", "/etc/pam.d", "/boot"]
+CRITICAL_PRIV_DIRS = ["/etc/sudoers.d", "/etc/pam.d", "/boot", "/etc/polkit-1/rules.d"]
 NET_CONFIG_FILES = ["/etc/ssh/sshd_config", "/etc/hosts", "/etc/resolv.conf"]
 USER_PERSIST_PATHS = [
     "/home/raybeak/.ssh/authorized_keys",
     "/home/raybeak/.config/systemd/user",
     "/home/raybeak/.config/autostart",
+    "/home/raybeak/.bashrc",
+    "/home/raybeak/.profile",
+    "/home/raybeak/.config/sway/config",
+    "/home/raybeak/.config/waybar/config",
 ]
 WATCH_DIRS = ["/etc", "/usr/local/bin", "/home/raybeak/.local/bin"]
-PERSIST_DIRS = ["/etc/cron.d", "/etc/cron.daily", "/etc/udev/rules.d"]
+PERSIST_DIRS = ["/etc/cron.d", "/etc/cron.daily", "/etc/udev/rules.d", "/var/spool/cron/crontabs"]
 MAX_DELTA_ITEMS = 20
 AUTH_FAIL_THRESHOLD = 5
 
@@ -74,23 +82,35 @@ def verifySelfAndBaseline(stateDir: Path, manifestPath: Path, keyring: str) -> t
     return True, "OK"
 
 
+def hashEntry(path: Path) -> str:
+    """Hash a regular file or symlink target (detecting symlink hijacks)."""
+    if path.is_symlink():
+        try:
+            target = os.readlink(path)
+            digest = hashlib.sha256(f"SYMLINK:{target}".encode("utf-8", errors="replace")).hexdigest()
+            return f"symlink:{digest}"
+        except OSError:
+            return "UNREADABLE_SYMLINK"
+    return sha256File(path)
+
+
 def collectFileHashes(rootPrefix: Path, relPaths: list[str]) -> dict[str, str]:
-    """Collect SHA-256 hashes for target files and directories."""
+    """Collect SHA-256 hashes for target files, symlinks, and directories."""
     hashes: dict[str, str] = {}
     for rel in relPaths:
         target = rootPrefix / rel.lstrip("/")
-        if target.is_file():
+        if target.is_symlink() or target.is_file():
             try:
-                hashes[rel] = sha256File(target)
+                hashes[rel] = hashEntry(target)
             except OSError:
                 hashes[rel] = "UNREADABLE"
         elif target.is_dir():
             try:
                 for p in sorted(target.rglob("*")):
-                    if p.is_file() and not p.is_symlink():
+                    if p.is_symlink() or p.is_file():
                         key = "/" + str(p.relative_to(rootPrefix))
                         try:
-                            hashes[key] = sha256File(p)
+                            hashes[key] = hashEntry(p)
                         except OSError:
                             hashes[key] = "UNREADABLE"
             except OSError:
@@ -99,18 +119,41 @@ def collectFileHashes(rootPrefix: Path, relPaths: list[str]) -> dict[str, str]:
 
 
 def collectSuidFiles(rootPrefix: Path) -> list[str]:
-    """Find SUID/SGID binaries on the root filesystem."""
-    rc, out = runCmd(["find", str(rootPrefix), "-xdev", "-perm", "/6000", "-type", "f"], timeout=20)
+    """Find SUID/SGID binaries across root and /home filesystems."""
+    scanRoots = [str(rootPrefix)]
+    homeDir = rootPrefix / "home"
+    if str(rootPrefix) == "/" and homeDir.is_dir():
+        scanRoots.append(str(homeDir))
+    result: set[str] = set()
+    for sr in scanRoots:
+        rc, out = runCmd(["find", sr, "-xdev", "-perm", "/6000", "-type", "f"], timeout=20)
+        if rc != 0 and not out:
+            continue
+        for line in out.splitlines():
+            p = Path(line.strip())
+            try:
+                result.add("/" + str(p.relative_to(rootPrefix)))
+            except ValueError:
+                result.add(line.strip())
+    return sorted(result)
+
+
+def collectCapabilities(rootPrefix: Path) -> list[str]:
+    """Collect POSIX file capabilities across / and /home."""
+    if str(rootPrefix) != "/":
+        return []
+    rc, out = runCmd(["getcap", "-r", "/", "/home"], timeout=25)
     if rc != 0 and not out:
         return []
-    result = []
-    for line in out.splitlines():
-        p = Path(line.strip())
-        try:
-            result.append("/" + str(p.relative_to(rootPrefix)))
-        except ValueError:
-            result.append(line.strip())
-    return sorted(result)
+    return sorted(line.strip() for line in out.splitlines() if line.strip() and "=" in line)
+
+
+def checkAuditdAlerts() -> int:
+    """Count recent high-priority auditd events tagged by myOs rules (last 4h)."""
+    rc, out = runCmd(["ausearch", "-k", "myos_priv", "-ts", "recent", "--raw"], timeout=10)
+    if rc != 0 or not out.strip():
+        return 0
+    return sum(1 for line in out.splitlines() if line.startswith("type=SYSCALL"))
 
 
 def collectTmpExecutables(rootPrefix: Path) -> list[str]:
@@ -212,7 +255,14 @@ def classifyPath(path: str) -> str:
     """Map raw path to sanitized structural class (no raw strings leave Stage 1)."""
     if path == "/etc/ld.so.preload":
         return "ld_preload"
-    if path.startswith("/etc/sudoers") or path.startswith("/etc/pam.d") or path == "/etc/shadow":
+    if (
+        path.startswith("/etc/sudoers")
+        or path.startswith("/etc/pam.d")
+        or path == "/etc/shadow"
+        or path == "/etc/security/authorized_keys"
+        or path.startswith("/etc/polkit-1")
+        or "/.gnupg/" in path
+    ):
         return "priv_auth_etc"
     if path.startswith("/etc/ssh") or path in ("/etc/hosts", "/etc/resolv.conf"):
         return "net_etc"
@@ -220,7 +270,15 @@ def classifyPath(path: str) -> str:
         return "boot_image"
     if "/.ssh/authorized_keys" in path:
         return "ssh_auth_keys"
-    if "/systemd/user" in path or "/autostart" in path or "/etc/cron" in path or "/udev/rules.d" in path:
+    if (
+        "/systemd/user" in path
+        or path.startswith("/etc/systemd/system")
+        or "/autostart" in path
+        or "/etc/cron" in path
+        or "/var/spool/cron" in path
+        or "/udev/rules.d" in path
+        or path.endswith(("/.bashrc", "/.profile", "/sway/config", "/waybar/config"))
+    ):
         return "persistence_unit"
     if path.startswith("/usr/local/bin") or "/.local/bin" in path:
         return "local_bin"
@@ -242,10 +300,15 @@ def evaluateRuleFloor(snap: dict[str, Any], baseline: dict[str, Any], liveMode: 
     newSuid = set(snap.get("suid", []))
     addedSuid = sorted(newSuid - oldSuid)
 
+    oldCaps = set(baseline.get("caps", []))
+    newCaps = set(snap.get("caps", []))
+    addedCaps = sorted(newCaps - oldCaps)
+
     tmpExecs = snap.get("tmpExecs", [])
     extPorts = snap.get("externalPorts", [])
     authFails = int(snap.get("authFailCount", 0))
     kernelErrs = int(snap.get("kernelErrCount", 0))
+    auditAlerts = int(snap.get("auditAlertCount", 0))
     cursorReset = bool(snap.get("journalCursorReset", False))
     aptRecent = bool(snap.get("aptRecent", False))
     integrityOk = bool(snap.get("integrityOk", True))
@@ -254,7 +317,8 @@ def evaluateRuleFloor(snap: dict[str, Any], baseline: dict[str, Any], liveMode: 
     if liveMode and changed:
         unownedCount, dpkgMismatch = checkDpkgIntegrity(changed)
 
-    modifiedClasses = sorted({classifyPath(p) for p in changed[:MAX_DELTA_ITEMS]})
+    # Classify ALL changed paths (never truncate before classification)
+    modifiedClasses = sorted({classifyPath(p) for p in changed})
     ruleFloor = 0
     reasons: list[str] = []
 
@@ -266,8 +330,11 @@ def evaluateRuleFloor(snap: dict[str, Any], baseline: dict[str, Any], liveMode: 
         ruleFloor = max(ruleFloor, 4)
         reasons.append("NET_OR_SSH_TAMPER")
 
-    if "ld_preload" in modifiedClasses or "priv_auth_etc" in modifiedClasses or addedSuid or "boot_image" in modifiedClasses:
-        if not (aptRecent and unownedCount == 0 and dpkgMismatch == 0 and "ld_preload" not in modifiedClasses and not addedSuid):
+    if "ld_preload" in modifiedClasses or "priv_auth_etc" in modifiedClasses or addedSuid or addedCaps or auditAlerts > 0:
+        ruleFloor = max(ruleFloor, 3)
+        reasons.append("PRIV_ESC_OR_BOOT")
+    elif "boot_image" in modifiedClasses:
+        if not (aptRecent and unownedCount == 0 and dpkgMismatch == 0):
             ruleFloor = max(ruleFloor, 3)
             reasons.append("PRIV_ESC_OR_BOOT")
 
@@ -286,6 +353,8 @@ def evaluateRuleFloor(snap: dict[str, Any], baseline: dict[str, Any], liveMode: 
         "deltaCount": len(changed),
         "modifiedClasses": modifiedClasses,
         "addedSuidCount": len(addedSuid),
+        "addedCapsCount": len(addedCaps),
+        "auditAlertCount": auditAlerts,
         "tmpExecCount": len(tmpExecs),
         "newExternalPortsCount": len(extPorts),
         "newExternalPorts": extPorts,
@@ -302,9 +371,11 @@ def buildSnapshot(rootPrefix: Path, stateDir: Path, allowedPorts: set[str], inte
     targets = CRITICAL_PRIV_FILES + CRITICAL_PRIV_DIRS + NET_CONFIG_FILES + USER_PERSIST_PATHS + WATCH_DIRS + PERSIST_DIRS
     hashes = collectFileHashes(rootPrefix, targets)
     suid = collectSuidFiles(rootPrefix)
+    caps = collectCapabilities(rootPrefix)
     tmpExecs = collectTmpExecutables(rootPrefix)
     extPorts = collectExternalPorts(allowedPorts)
     authFails, kernelErrs, cursorReset = checkJournalLogs(stateDir)
+    auditAlerts = checkAuditdAlerts() if str(rootPrefix) == "/" else 0
     aptRecent = checkAptRecent(rootPrefix)
 
     return {
@@ -313,10 +384,12 @@ def buildSnapshot(rootPrefix: Path, stateDir: Path, allowedPorts: set[str], inte
         "integrityReason": integrityReason,
         "hashes": hashes,
         "suid": suid,
+        "caps": caps,
         "tmpExecs": tmpExecs,
         "externalPorts": extPorts,
         "authFailCount": authFails,
         "kernelErrCount": kernelErrs,
+        "auditAlertCount": auditAlerts,
         "journalCursorReset": cursorReset,
         "aptRecent": aptRecent,
     }

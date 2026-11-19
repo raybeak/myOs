@@ -21,9 +21,12 @@ if [ -d "$HOME/bin" ] ; then
     PATH="$HOME/bin:$PATH"
 fi
 
-# set PATH so it includes user's private bin if it exists
-if [ -d "$HOME/.local/bin" ] ; then
-    PATH="$HOME/.local/bin:$PATH"
+# set PATH so it includes user's private bin if it exists (idempotent, POSIX)
+if [ -d "$HOME/.local/bin" ]; then
+    case ":$PATH:" in
+        *":$HOME/.local/bin:"*) ;;
+        *) PATH="$HOME/.local/bin:$PATH" ;;
+    esac
 fi
 if [ -f "$HOME/.cargo/env" ]; then
     . "$HOME/.cargo/env"
@@ -33,16 +36,8 @@ export EDITOR=micro
 export VISUAL=micro
 export SUDO_EDITOR=micro
 
-# Added by Antigravity CLI installer
-if [ -d "$HOME/.local/bin" ]; then
-    export PATH="$HOME/.local/bin:$PATH"
-fi
 export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
 
 if [ -n "${BASH_VERSION:-}" ] && [ -f "$HOME/.config/myos/env-helpers.sh" ]; then
     . "$HOME/.config/myos/env-helpers.sh"
 fi
-
-
-# Added by Antigravity CLI installer
-export PATH="/home/raybeak/.local/bin:$PATH"

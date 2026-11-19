@@ -64,12 +64,15 @@ intel-gpu-tools
 mesa-vulkan-drivers
 libvulkan1
 
-# --- network / bluetooth ---
+# --- network / bluetooth / security ---
 network-manager
 ufw
 bluez
 nmap
 arp-scan
+auditd
+usbguard
+dma
 
 # --- screenshot / clipboard ---
 grim

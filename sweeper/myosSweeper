@@ -35,7 +35,7 @@ cmd_init_baseline() {
         --root "$ROOT_PREFIX" \
         --state-dir "$STATE_DIR" \
         --run-dir "$RUN_DIR" \
-        --allowed-ports "${ALLOWED_EXTERNAL_PORTS:-41641}" \
+        --allowed-ports "${ALLOWED_EXTERNAL_PORTS-}" \
         --write-baseline
     sign_baseline
     : > "$STATE_DIR/pending.jsonl"
@@ -51,7 +51,7 @@ cmd_run() {
         --run-dir "$RUN_DIR" \
         --manifest "${MANIFEST_PATH:-/opt/myosSweeper/manifest.sha256}" \
         --keyring "${TRUSTED_KEYRING:-/etc/myosSweeper/trustedkey.gpg}" \
-        --allowed-ports "${ALLOWED_EXTERNAL_PORTS:-41641}" >/dev/null
+        --allowed-ports "${ALLOWED_EXTERNAL_PORTS-}" >/dev/null
 
     python3 "$SCRIPT_DIR/runJev.py" \
         --features "$RUN_DIR/features.json" \

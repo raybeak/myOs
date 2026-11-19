@@ -56,15 +56,18 @@ MODEL_HASH="$(sha256sum "$MODEL_FILE" | awk '{print $1}')"
 sed -i "s|PIN_LLAMA_SHA256_BEFORE_DEPLOY|$LLAMA_HASH|" "$OPT_DIR/sweeper.conf"
 sed -i "s|PIN_MODEL_SHA256_BEFORE_DEPLOY|$MODEL_HASH|" "$OPT_DIR/sweeper.conf"
 sha256sum "$OPT_DIR/collectDelta.py" "$OPT_DIR/runJev.py" "$OPT_DIR/escalateAndAlert.py" \
-    "$OPT_DIR/myosSweeper" "$OPT_DIR/bin/llama-cli" "$MODEL_FILE" > "$OPT_DIR/manifest.sha256"
+    "$OPT_DIR/myosSweeper" "$OPT_DIR/sweeper.conf" "$OPT_DIR/bin/llama-cli" \
+    "$OPT_DIR/bin/"*.so* "$MODEL_FILE" > "$OPT_DIR/manifest.sha256"
 chmod 644 "$OPT_DIR/manifest.sha256"
 
-echo "=== [6/7] Configuring GPG trusted keyring ==="
-KEY_FPR="$(sudo -u "$TARGET_USER" gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')"
-if [[ -z "$KEY_FPR" ]]; then
-    echo "[WARN] No GPG secret key found for $TARGET_USER. Generating dedicated myosSweeper key..."
-    sudo -u "$TARGET_USER" gpg --batch --passphrase '' --quick-generate-key "myosSweeper <sweeper@local>" default default never
+echo "=== [6/7] Configuring GPG trusted keyring (hardware/passphrase key required) ==="
+KEY_FPR="${SIGNING_KEY_ID:-2020F34F7015C34F052A1A3E4BF8329DC5E9F845}"
+if ! sudo -u "$TARGET_USER" gpg --list-keys "$KEY_FPR" >/dev/null 2>&1; then
     KEY_FPR="$(sudo -u "$TARGET_USER" gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ {print $10; exit}')"
+fi
+if [[ -z "$KEY_FPR" ]]; then
+    echo "[ERR] No GPG signing key found for $TARGET_USER. Provision JavaCard or passphrase-protected key first." >&2
+    exit 1
 fi
 sudo -u "$TARGET_USER" gpg --export "$KEY_FPR" > "$ETC_DIR/trustedkey.gpg"
 chmod 644 "$ETC_DIR/trustedkey.gpg"

@@ -3,4 +3,4 @@ Description=Alert on MyOS Sweeper failure (%i)
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/systemd-run --user --machine=raybeak@.host --wait --collect /usr/bin/notify-send -u critical "[SEC: SWEEPER FAILED]" "Unit %i failed. Check journalctl -u %i"
+ExecStart=/bin/sh -c 'ts=$(date +%%s); printf "{\"timestamp\":%%s,\"finalCode\":3,\"label\":\"3_SWEEPER_UNIT_FAILED\",\"reasons\":[\"UNIT_FAILED:%i\"],\"ports\":[],\"desktopNote\":\"\"}\n" "$ts" >> /var/lib/myosSweeper/pending.jsonl; printf "{\"timestamp\":%%s,\"status\":\"CRIT\",\"code\":3,\"hasPending\":true}\n" "$ts" > /var/lib/myosSweeper/state.json; timeout 5 /usr/bin/systemd-run --user --machine=raybeak@.host --wait --collect /usr/bin/notify-send -u critical "[SEC: SWEEPER FAILED]" "Unit %i failed. Check journalctl -u %i" || true'

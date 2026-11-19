@@ -103,15 +103,23 @@ def main() -> int:
             sendSwayNotification(f"{sourceTag} {decision.get('label')}", summary, critical=(finalCode >= 3))
 
     hasPending = pendingPath.exists() and pendingPath.stat().st_size > 0
+    maxPendingCode = finalCode
     if hasPending:
-        status = "CRIT" if finalCode >= 3 else "WARN"
+        for line in pendingPath.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if not line.strip():
+                continue
+            try:
+                maxPendingCode = max(maxPendingCode, int(json.loads(line).get("finalCode", 0)))
+            except (json.JSONDecodeError, ValueError, TypeError):
+                maxPendingCode = max(maxPendingCode, 2)
+        status = "CRIT" if maxPendingCode >= 3 else "WARN"
     else:
         status = "OK"
 
     state = {
         "timestamp": now,
         "status": status,
-        "code": finalCode,
+        "code": maxPendingCode if hasPending else finalCode,
         "hasPending": hasPending,
     }
     (stateDir / "state.json").write_text(json.dumps(state, indent=2), encoding="utf-8")

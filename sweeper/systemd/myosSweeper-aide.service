@@ -7,4 +7,4 @@ OnFailure=myosSweeper-alert@%n.service
 Type=oneshot
 Nice=19
 IOSchedulingClass=idle
-ExecStart=/usr/bin/aide --check
+ExecStart=/usr/bin/aide --config /etc/aide/aide.conf --check
