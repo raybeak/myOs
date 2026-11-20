@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# myos-toggle-touchpad — Control touchpad events and sync the hardware LED.
+# Usage: myos-toggle-touchpad [toggle|on|off|status]
+set -euo pipefail
+
+ACTION="${1:-toggle}"
+
+usage() {
+  echo "Usage: myos-toggle-touchpad [toggle|on|off|status]"
+}
+
+read_touchpad_state() {
+  swaymsg -t get_inputs | python3 -c '
+import json, sys
+inputs = json.load(sys.stdin)
+touchpads = [item for item in inputs if item.get("type") == "touchpad"]
+if not touchpads:
+    print("Error: no touchpad found in sway inputs.", file=sys.stderr)
+    sys.exit(1)
+state = (touchpads[0].get("libinput") or {}).get("send_events")
+if state in ("enabled", "enabled_on_external_mouse"):
+    print("ON")
+elif state == "disabled":
+    print("OFF")
+else:
+    print(f"Error: unknown touchpad send_events state: {state!r}.", file=sys.stderr)
+    sys.exit(1)
+'
+}
+
+sync_led() {
+  local state="$1" led_value sid
+  if [[ "$state" == "OFF" ]]; then led_value=1; else led_value=0; fi
+
+  if busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto \
+    org.freedesktop.login1.Session SetBrightness ssu leds tpad_led "$led_value" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  sid="$(loginctl list-sessions --no-legend 2>/dev/null \
+    | awk -v u="$(id -un)" '$3 == u && $4 != "-" && $4 != "" {print $1; exit}')"
+  if [[ -n "$sid" ]]; then
+    busctl call org.freedesktop.login1 "/org/freedesktop/login1/session/${sid}" \
+      org.freedesktop.login1.Session SetBrightness ssu leds tpad_led "$led_value" >/dev/null
+    return 0
+  fi
+
+  echo "Error: unable to sync touchpad LED via systemd-logind (no active seated session)." >&2
+  return 1
+}
+
+case "$ACTION" in
+  status)
+    read_touchpad_state
+    ;;
+  on|off|toggle)
+    if [[ "$ACTION" == "on" ]]; then
+      swaymsg input type:touchpad events enabled >/dev/null
+    elif [[ "$ACTION" == "off" ]]; then
+      swaymsg input type:touchpad events disabled >/dev/null
+    else
+      swaymsg input type:touchpad events toggle >/dev/null
+    fi
+
+    STATE="$(read_touchpad_state)"
+    sync_led "$STATE"
+    if command -v notify-send >/dev/null 2>&1; then
+      notify-send "myOs Touchpad" "Touchpad: $STATE"
+    fi
+    ;;
+  -h|--help)
+    usage
+    ;;
+  *)
+    echo "Error: unknown action '$ACTION'." >&2
+    usage >&2
+    exit 2
+    ;;
+esac

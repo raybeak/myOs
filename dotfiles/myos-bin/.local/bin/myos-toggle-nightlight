@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # myos-toggle-nightlight — Toggle wlsunset warm color temperature or query status.
 # Usage: myos-toggle-nightlight [toggle|on|off|status]
-# Env: MYOS_NIGHTLIGHT_TEMP (default: 4000K)
+# Env: MYOS_NIGHTLIGHT_TEMP (default: 3750K)
 set -euo pipefail
 
 ACTION="${1:-toggle}"
-TEMP="${MYOS_NIGHTLIGHT_TEMP:-4000}"
+TEMP="${MYOS_NIGHTLIGHT_TEMP:-3750}"
 if [[ ! "$TEMP" =~ ^[0-9]+$ ]] || ((TEMP < 1000 || TEMP > 9999)); then
   echo "Error: MYOS_NIGHTLIGHT_TEMP must be an integer between 1000 and 9999 (got '$TEMP')." >&2
   exit 2

@@ -169,6 +169,9 @@ bindsym --locked XF86MonBrightnessDown exec ~/.local/bin/myos-brightness down 5
 bindsym XF86AudioPlay exec playerctl play-pause
 bindsym XF86AudioNext exec playerctl next
 bindsym XF86AudioPrev exec playerctl previous
+bindsym XF86TouchpadToggle exec ~/.local/bin/myos-toggle-touchpad toggle
+bindsym $mod+p exec ~/.local/bin/myos-display
+bindsym XF86Launch5 exec ~/.local/bin/myos-toggle-nightlight toggle
 
 # Screenshot: save to ~/photo/screenshots + copy to clipboard
 bindsym Print exec ~/.local/bin/myos-screenshot region

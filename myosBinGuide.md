@@ -7,7 +7,7 @@ All utilities adhere to `myOs` invariants: no new packages beyond `packagesV2.tx
 ### Environment Overrides
 
 - `MYOS_SCREENSHOT_DIR`: Override screenshot output dir (default: `~/photo/screenshots`).
-- `MYOS_NIGHTLIGHT_TEMP`: Color temperature in Kelvin, integer `1000..9999` (default: `4000`).
+- `MYOS_NIGHTLIGHT_TEMP`: Color temperature in Kelvin, integer `1000..9999` (default: `3750`).
 - `MYOS_WEBAPP_BROWSER`: Browser executable name/path validated against `^[A-Za-z0-9._/-]+$` (default: `brave-browser`).
 - `MYOS_VG_NAME` / `MYOS_ROOT_LV`: LVM VG and root LV names (default: `ubuntu-vg` / `ubuntu-lv`).
 - `MYOS_BACKLIGHT_DEV` / `MYOS_BACKLIGHT_MIN_PCT`: Backlight sysfs device (default: `intel_backlight`) and minimum brightness floor percent `1..50` (default: `2`).
@@ -63,9 +63,10 @@ All utilities adhere to `myOs` invariants: no new packages beyond `packagesV2.tx
 ## 4. `myos-toggle-nightlight` — Color Temperature Toggle
 
 - **Path**: `dotfiles/myos-bin/.local/bin/myos-toggle-nightlight`
+- **Keybinding**: `Fn+F9` (`XF86Launch5`, keycode `192`) -> `myos-toggle-nightlight toggle`
 - **Usage**: `myos-toggle-nightlight [toggle|on|off|status]`
 - **Behavior**:
-  - Starts or stops `wlsunset` immediately at `MYOS_NIGHTLIGHT_TEMP` (default `4000`K, using `-t 4000 -T 4001` so no geolocation is required).
+  - Starts or stops `wlsunset` immediately at `MYOS_NIGHTLIGHT_TEMP` (default `3750`K, using `-t 3750 -T 3751` so no geolocation is required).
   - `status`: Prints `ON` or `OFF`.
 - **Dependencies**: `wlsunset`.
 - **Verification**: `myos-toggle-nightlight status`
@@ -129,3 +130,29 @@ All utilities adhere to `myOs` invariants: no new packages beyond `packagesV2.tx
   - Avoids adding the user to the `video` group (keeps `/dev/video*` unexposed) while working around Ubuntu's `brightnessctl` lacking `libsystemd` support.
   - Enforces a configurable minimum brightness floor (`MYOS_BACKLIGHT_MIN_PCT`, default `2%`) to prevent accidental `0%` screen blackout.
 - **Verification**: `myos-brightness get && myos-brightness down 5 && myos-brightness up 5`
+
+---
+
+## 9. `myos-toggle-touchpad` — Touchpad Toggle + LED Sync
+
+- **Path**: `dotfiles/myos-bin/.local/bin/myos-toggle-touchpad`
+- **Keybinding**: `Fn+F5` (`XF86TouchpadToggle`, keycode `199`) -> `myos-toggle-touchpad toggle`
+- **Usage**: `myos-toggle-touchpad [toggle|on|off|status]`
+- **Behavior**:
+  - `toggle` / `on` / `off`: Toggles (or explicitly enables/disables) touchpad input events via Sway.
+  - Keeps the hardware touchpad LED in sync with the input state via the `logind` `tpad_led` LED subsystem (zero-root D-Bus path, same model as `myos-brightness`; no `sudo`, no `input` group membership).
+  - `status`: Prints `ON` or `OFF`.
+- **Verification**: `myos-toggle-touchpad status` (and press `Fn+F5` to confirm input state and `tpad_led` LED flip together)
+
+---
+
+## 10. `myos-display` — Sway-Native Output Switcher
+
+- **Path**: `dotfiles/myos-bin/.local/bin/myos-display`
+- **Keybinding**: `Fn+F7` (hardware emits `Super_L`+`p`, bound as `$mod+p`) -> `myos-display`
+- **Usage**: `myos-display`
+- **Behavior**:
+  - Enumerates connected outputs via Sway-native `get_outputs` (`swaymsg -t get_outputs`; no external display-management dependency).
+  - Presents the output switcher menu via `wofi --dmenu` and applies the selected output action.
+  - Zero extra dependencies: reuses the existing toolbox stack (`swaymsg`, `wofi`); no new packages beyond `packagesV2.txt`.
+- **Verification**: `myos-display` with an external monitor connected -> confirm the `wofi` menu lists outputs and the selected action applies

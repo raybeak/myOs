@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# myos-display — Arrange connected internal and external displays in Sway.
+# Usage: myos-display
+set -euo pipefail
+
+if (($# != 0)); then
+  echo "Usage: myos-display" >&2
+  exit 2
+fi
+
+OUTPUTS="$(swaymsg -t get_outputs | python3 -c '
+import json, sys
+outputs = json.load(sys.stdin)
+internal = next((item for item in outputs if item.get("name") == "eDP-1"), None)
+if internal is None:
+    internal = next((item for item in outputs if item.get("name", "").startswith("eDP")), None)
+if internal is None:
+    print("Error: no internal eDP output found.", file=sys.stderr)
+    sys.exit(1)
+externals = [item for item in outputs if item.get("name") != internal["name"]]
+print(internal["name"])
+for item in externals:
+    print(item["name"])
+')"
+
+mapfile -t OUTPUT_NAMES <<<"$OUTPUTS"
+INTERNAL="${OUTPUT_NAMES[0]}"
+EXTERNALS=("${OUTPUT_NAMES[@]:1}")
+
+current_info() {
+  swaymsg -t get_outputs | python3 -c '
+import json, sys
+for item in json.load(sys.stdin):
+    name = item.get("name", "?")
+    state = "ON" if item.get("active") else "OFF"
+    mode = item.get("current_mode") or (item.get("modes") or [{}])[0]
+    w, h = mode.get("width", "?"), mode.get("height", "?")
+    rect = item.get("rect") or {}
+    x, y = rect.get("x", 0), rect.get("y", 0)
+    print(f"{name} [{state}]: {w}x{h} at {x},{y}")
+'
+}
+
+output_width() {
+  swaymsg -t get_outputs | python3 -c '
+import json, sys
+name = sys.argv[1]
+outputs = json.load(sys.stdin)
+item = next((o for o in outputs if o.get("name") == name), None)
+if item is None:
+    raise SystemExit(f"Error: output {name!r} disappeared.")
+mode = item.get("current_mode") or (item.get("modes") or [{}])[0]
+print(mode.get("width", 1920))
+' "$1"
+}
+
+if ((${#EXTERNALS[@]} == 0)); then
+  INFO="$(current_info)"
+  printf '%s\n' "$INFO" "No external display connected" "Close" \
+    | wofi --dmenu --prompt "DISPLAY" --insensitive >/dev/null || true
+  exit 0
+fi
+
+CHOICES=()
+for ext in "${EXTERNALS[@]}"; do
+  CHOICES+=("Extend Right ($ext right of $INTERNAL)")
+  CHOICES+=("Extend Left ($ext left of $INTERNAL)")
+  CHOICES+=("External Only ($ext)")
+done
+CHOICES+=("Internal Only ($INTERNAL)" "Enable All")
+CHOICE="$(printf '%s\n' "${CHOICES[@]}" | wofi --dmenu --prompt "DISPLAY" --insensitive || true)"
+[[ -n "$CHOICE" ]] || exit 0
+
+for ext in "${EXTERNALS[@]}"; do
+  if [[ "$CHOICE" == "Extend Right ($ext right of $INTERNAL)" ]]; then
+    swaymsg output "$INTERNAL" enable position 0 0 >/dev/null
+    INTERNAL_WIDTH="$(output_width "$INTERNAL")"
+    swaymsg output "$ext" enable position "$INTERNAL_WIDTH" 0 >/dev/null
+    exit 0
+  elif [[ "$CHOICE" == "Extend Left ($ext left of $INTERNAL)" ]]; then
+    swaymsg output "$ext" enable position 0 0 >/dev/null
+    EXTERNAL_WIDTH="$(output_width "$ext")"
+    swaymsg output "$INTERNAL" enable position "$EXTERNAL_WIDTH" 0 >/dev/null
+    exit 0
+  elif [[ "$CHOICE" == "External Only ($ext)" ]]; then
+    swaymsg output "$ext" enable >/dev/null
+    swaymsg output "$INTERNAL" disable >/dev/null
+    exit 0
+  fi
+done
+
+if [[ "$CHOICE" == "Internal Only ($INTERNAL)" ]]; then
+  swaymsg output "$INTERNAL" enable >/dev/null
+  for ext in "${EXTERNALS[@]}"; do swaymsg output "$ext" disable >/dev/null; done
+elif [[ "$CHOICE" == "Enable All" ]]; then
+  swaymsg output "$INTERNAL" enable >/dev/null
+  for ext in "${EXTERNALS[@]}"; do swaymsg output "$ext" enable >/dev/null; done
+fi

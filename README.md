@@ -85,8 +85,26 @@ Modular text-only desktop & system utilities stowed via `dotfiles/myos-bin` (`--
 - `myos-menu` (`$mod+Alt+space`): Unified `wofi --dmenu` action center (toggles, screenshots, TUI/WebApp launchers, security/system actions, Sway keybindings cheatsheet, power).
 - `myos-screenshot` (`Print` / `Shift+Print`): Saves region/full capture to `~/photo/screenshots/` and copies to clipboard (`wl-copy`).
 - `myos-toggle-idle` / `myos-toggle-nightlight`: Toggle `swayidle` caffeine mode and `wlsunset` warm temperature (with `status` query).
+- `myos-brightness` (`Fn+F2` / `Fn+F3`): Logind seat-scoped backlight control (5% grid snap, `2%` floor, `--locked`).
+- `myos-toggle-touchpad` (`Fn+F5`): Sway touchpad toggle with logind `tpad_led` LED sync (zero-root).
+- `myos-display` (`Fn+F7` / `$mod+p`): Sway-native `get_outputs` + `wofi` output switcher.
 - `myos-launch-tui` / `myos-webapp`: Standardized floating `foot` TUI wrapper (`app_id=myos-tui`) and frameless Brave `--app=` `.desktop` manager.
 - `myos-update`: LVM pre-upgrade snapshot guard (`ubuntu-vg/myos-pre-*`, `8G`, keep 2, VG free-space check) before `apt upgrade`.
+
+### LG gram 16ZD90P Fn Keymap (verified)
+
+Live-verified via `xev` + hardware testing; hardware keys bind in `dotfiles/sway/.config/sway/config`:
+
+- `Fn+F1` (`XF86Launch6`, keycode `193`): Reserved / unassigned (free slot).
+- `Fn+F2` / `Fn+F3` (`XF86MonBrightnessDown` / `XF86MonBrightnessUp`): `myos-brightness down|up 5` (logind D-Bus, 5% grid snap, 2% floor, `--locked`).
+- `Fn+F4`: EC-swallowed, no userspace event (unused).
+- `Fn+F5` (`XF86TouchpadToggle`, keycode `199`): `myos-toggle-touchpad toggle` (Sway touchpad toggle + logind `tpad_led` LED sync, zero-root).
+- `Fn+F6`: EC hardware Airplane mode / Wireless hotkeys (do not bind).
+- `Fn+F7` (`Super_L`+`p`, bound as `$mod+p`): `myos-display` (Sway-native `get_outputs` + `wofi` output switcher).
+- `Fn+F8`: EC hardwired keyboard backlight (`0 -> 127 -> 255`, no OS binding needed).
+- `Fn+F9` (`XF86Launch5`, keycode `192`): `myos-toggle-nightlight toggle` (`wlsunset`, zero-root).
+- `Fn+F10` / `Fn+F11` / `Fn+F12` (`XF86AudioMute` / `XF86AudioLowerVolume` / `XF86AudioRaiseVolume`): `wpctl` (`-l 1.0`, `5%+/-`, `--locked`).
+- Note: Waybar `VOL:` / `BRI:` modules are read-only (scroll disabled).
 
 ### Workspace `.env` Helpers (`env*`)
 
@@ -100,6 +118,7 @@ Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encr
 
 ## Updates
 
+- `feat(fn-keys): add myos-toggle-touchpad, myos-display, 3750K nightlight, and LG gram Fn keymap docs`; `2026-11-20 15:06 KST`
 - `feat(myos-bin): add modular myos-* CLI toolbox, unified wofi menu, LVM update guard, and myosBinGuide.md`; `2026-11-20 11:46 KST`
 - `feat(security): deploy auditd+usbguard+DoT+MAC-rand, Waybar net toggle, root pinentry, and myosSweeper HIDS fixes`; `2026-11-19 18:48 KST`
 - `feat(hardening): add reproducible laptop-only SSHD, sysctl, UFW, and JavaCard confirm baseline`; `2026-11-19 10:18 KST`
