@@ -117,31 +117,39 @@ menu_system() {
 }
 
 main_menu() {
-  local idle_state night_state choice
+  local idle_state night_state tpad_state charge_state choice
   idle_state="$("$BIN_DIR/myos-toggle-idle" status 2>/dev/null || echo "?")"
   night_state="$("$BIN_DIR/myos-toggle-nightlight" status 2>/dev/null || echo "?")"
+  tpad_state="$("$BIN_DIR/myos-toggle-touchpad" status 2>/dev/null || echo "?")"
+  charge_state="$("$BIN_DIR/myos-toggle-charge" status 2>/dev/null || echo "?")"
 
   choice="$(printf '%s\n' \
     "Toggle Idle Lock [${idle_state}]" \
     "Toggle Nightlight [${night_state}]" \
+    "Toggle Touchpad [${tpad_state}]" \
+    "Toggle Battery Charge [${charge_state}]" \
+    "Display Layout ->" \
     "Screenshot (Region)" \
     "Screenshot (Full)" \
     "TUI Apps ->" \
     "Web Apps ->" \
     "Security & System ->" \
     "Keybindings" \
-    "Power ->" | run_wofi "MYOS" 10 360)" || exit 0
+    "Power ->" | run_wofi "MYOS" 13 400)" || exit 0
 
   case "$choice" in
-    "Toggle Idle Lock "*)  exec "$BIN_DIR/myos-toggle-idle" toggle ;;
-    "Toggle Nightlight "*) exec "$BIN_DIR/myos-toggle-nightlight" toggle ;;
-    "Screenshot (Region)") exec "$BIN_DIR/myos-screenshot" region ;;
-    "Screenshot (Full)")   exec "$BIN_DIR/myos-screenshot" full ;;
-    "TUI Apps ->")         menu_tui ;;
-    "Web Apps ->")         menu_webapps ;;
-    "Security & System ->") menu_system ;;
-    "Keybindings")         show_keybindings ;;
-    "Power ->")            exec "$HOME/.config/sway/scripts/power.sh" ;;
+    "Toggle Idle Lock "*)       exec "$BIN_DIR/myos-toggle-idle" toggle ;;
+    "Toggle Nightlight "*)      exec "$BIN_DIR/myos-toggle-nightlight" toggle ;;
+    "Toggle Touchpad "*)        exec "$BIN_DIR/myos-toggle-touchpad" toggle ;;
+    "Toggle Battery Charge "*)  exec "$BIN_DIR/myos-toggle-charge" toggle ;;
+    "Display Layout ->")        exec "$BIN_DIR/myos-display" ;;
+    "Screenshot (Region)")      exec "$BIN_DIR/myos-screenshot" region ;;
+    "Screenshot (Full)")        exec "$BIN_DIR/myos-screenshot" full ;;
+    "TUI Apps ->")              menu_tui ;;
+    "Web Apps ->")              menu_webapps ;;
+    "Security & System ->")     menu_system ;;
+    "Keybindings")              show_keybindings ;;
+    "Power ->")                 exec "$HOME/.config/sway/scripts/power.sh" ;;
   esac
 }
 

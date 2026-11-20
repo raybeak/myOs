@@ -10,6 +10,7 @@ swayidle
 swaylock
 waybar
 sway-notification-center
+libnotify-bin
 wofi
 foot
 xwayland
@@ -55,6 +56,7 @@ tlp
 tlp-rdw
 thermald
 acpi
+lvm2
 systemd-zram-generator
 
 # --- intel gpu (Iris Xe) ---
