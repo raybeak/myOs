@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# myos-toggle-idle — Toggle swayidle auto-lock/DPMS (caffeine mode) or query status.
+# Usage: myos-toggle-idle [toggle|on|off|status]
+# Runtime state: ${XDG_RUNTIME_DIR:-/run/user/$UID}/myos-idle-off
+set -euo pipefail
+
+ACTION="${1:-toggle}"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+MARKER="$RUNTIME_DIR/myos-idle-off"
+LOCK_CMD="swaylock -f -c 000000"
+
+notify() {
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "myOs Idle" "$1"
+  fi
+}
+
+is_running() {
+  pgrep -u "$(id -u)" -x swayidle >/dev/null 2>&1
+}
+
+start_idle() {
+  rm -f "$MARKER"
+  pkill -u "$(id -u)" -x swayidle 2>/dev/null || true
+  nohup swayidle -w \
+    timeout 300 "$LOCK_CMD" \
+    timeout 600 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+    before-sleep "$LOCK_CMD" \
+    lock "$LOCK_CMD" >/dev/null 2>&1 &
+  notify "Auto-lock: ON"
+}
+
+stop_idle() {
+  pkill -u "$(id -u)" -x swayidle 2>/dev/null || true
+  mkdir -p "$RUNTIME_DIR"
+  : > "$MARKER"
+  notify "Auto-lock: OFF (caffeine active)"
+}
+
+case "$ACTION" in
+  status)
+    if [[ -f "$MARKER" ]] || ! is_running; then
+      echo "OFF"
+    else
+      echo "ON"
+    fi
+    ;;
+  on)
+    start_idle
+    ;;
+  off)
+    stop_idle
+    ;;
+  toggle)
+    if [[ -f "$MARKER" ]] || ! is_running; then
+      start_idle
+    else
+      stop_idle
+    fi
+    ;;
+  -h|--help)
+    echo "Usage: myos-toggle-idle [toggle|on|off|status]"
+    ;;
+  *)
+    echo "Error: unknown action '$ACTION'." >&2
+    exit 2
+    ;;
+esac

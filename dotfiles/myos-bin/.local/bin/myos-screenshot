@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# myos-screenshot — Capture Wayland screenshot to ~/photo/screenshots and clipboard.
+# Usage: myos-screenshot [region|full]
+# Dependencies: grim, slurp (for region), wl-copy, notify-send (optional)
+set -euo pipefail
+
+MODE="${1:-region}"
+OUT_DIR="${MYOS_SCREENSHOT_DIR:-$HOME/photo/screenshots}"
+
+notify() {
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "myOs Screenshot" "$1"
+  fi
+}
+
+capture_and_save() {
+  mkdir -p "$OUT_DIR"
+  local ts tmp out_file
+  ts="$(date +%Y%m%d-%H%M%S-%3N)"
+  tmp="$(mktemp "$OUT_DIR/.shot-${ts}-XXXXXX.png")"
+  trap 'rm -f "$tmp"' RETURN
+
+  if ! grim "$@" "$tmp"; then
+    exit 1
+  fi
+  wl-copy --type image/png < "$tmp"
+
+  out_file="$OUT_DIR/shot-${ts}.png"
+  if ! mv -n "$tmp" "$out_file" || [[ -e "$tmp" ]]; then
+    out_file="$OUT_DIR/shot-${ts}-$$.png"
+    mv "$tmp" "$out_file"
+  fi
+  trap - RETURN
+  notify "Saved & copied: $(basename "$out_file")"
+}
+
+case "$MODE" in
+  region)
+    if ! GEOM="$(slurp 2>/dev/null)"; then
+      exit 0
+    fi
+    [[ -z "$GEOM" ]] && exit 0
+    capture_and_save -g "$GEOM"
+    ;;
+  full)
+    capture_and_save
+    ;;
+  -h|--help)
+    echo "Usage: myos-screenshot [region|full]"
+    ;;
+  *)
+    echo "Error: unknown mode '$MODE'. Use 'region' or 'full'." >&2
+    exit 2
+    ;;
+esac

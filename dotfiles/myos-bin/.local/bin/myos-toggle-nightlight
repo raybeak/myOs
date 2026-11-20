@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# myos-toggle-nightlight — Toggle wlsunset warm color temperature or query status.
+# Usage: myos-toggle-nightlight [toggle|on|off|status]
+# Env: MYOS_NIGHTLIGHT_TEMP (default: 4000K)
+set -euo pipefail
+
+ACTION="${1:-toggle}"
+TEMP="${MYOS_NIGHTLIGHT_TEMP:-4000}"
+if [[ ! "$TEMP" =~ ^[0-9]+$ ]] || ((TEMP < 1000 || TEMP > 9999)); then
+  echo "Error: MYOS_NIGHTLIGHT_TEMP must be an integer between 1000 and 9999 (got '$TEMP')." >&2
+  exit 2
+fi
+HIGH_TEMP="$((TEMP + 1))"
+
+notify() {
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "myOs Nightlight" "$1"
+  fi
+}
+
+is_running() {
+  pgrep -u "$(id -u)" -x wlsunset >/dev/null 2>&1
+}
+
+start_nightlight() {
+  if ! is_running; then
+    nohup wlsunset -t "$TEMP" -T "$HIGH_TEMP" >/dev/null 2>&1 &
+  fi
+  notify "Nightlight: ON (${TEMP}K)"
+}
+
+stop_nightlight() {
+  pkill -u "$(id -u)" -x wlsunset 2>/dev/null || true
+  notify "Nightlight: OFF"
+}
+
+case "$ACTION" in
+  status)
+    if is_running; then
+      echo "ON"
+    else
+      echo "OFF"
+    fi
+    ;;
+  on)
+    start_nightlight
+    ;;
+  off)
+    stop_nightlight
+    ;;
+  toggle)
+    if is_running; then
+      stop_nightlight
+    else
+      start_nightlight
+    fi
+    ;;
+  -h|--help)
+    echo "Usage: myos-toggle-nightlight [toggle|on|off|status]"
+    ;;
+  *)
+    echo "Error: unknown action '$ACTION'." >&2
+    exit 2
+    ;;
+esac

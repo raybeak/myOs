@@ -73,10 +73,20 @@ sudo reboot
 ### Repository Structure
 
 - `bootstrap.sh`: Idempotent 8-stage installer (`remove.txt` -> `packagesV2.txt` -> external tools -> `stow` -> `/etc` & `UFW` baseline -> `servicesV2.txt` -> `micro` default -> `NetworkManager` cutover).
-- `dotfiles/`: GNU `stow` packages (`sway`, `waybar`, `swaync`, `foot`, `micro`, `fcitx5`, `gnupg` with `--no-folding`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0`).
+- `dotfiles/`: GNU `stow` packages (`sway`, `waybar`, `swaync`, `foot`, `micro`, `fcitx5`, `gnupg` with `--no-folding`, `myos-bin` with `--no-folding`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0`).
 - `etc/`: System configs (`greetd/config.toml`, `netplan/01-nm.yaml`, `systemd/zram-generator.conf`, `tlp.d/90-gram.conf`, `sudoers.d/ssh-agent`, `security/authorized_keys`, `ssh/sshd_config.d/01-hardening.conf`, `sysctl.d/99-hardening.conf`).
 - `sweeper/`: Standalone `/` security delta collector, rule floor, local/Tailscale triage, and `systemd` timers.
-- `gate2JavaCardStarter.md` / `gate3SweeperStarter.md`: Module setup & operational guides.
+- `gate2JavaCardStarter.md` / `gate3SweeperStarter.md` / `myosBinGuide.md`: Module setup & operational guides.
+
+### `myOs` CLI Toolbox (`~/.local/bin/myos-*`)
+
+Modular text-only desktop & system utilities stowed via `dotfiles/myos-bin` (`--no-folding`); see `myosBinGuide.md` for full per-tool documentation:
+
+- `myos-menu` (`$mod+Alt+space`): Unified `wofi --dmenu` action center (toggles, screenshots, TUI/WebApp launchers, security/system actions, Sway keybindings cheatsheet, power).
+- `myos-screenshot` (`Print` / `Shift+Print`): Saves region/full capture to `~/photo/screenshots/` and copies to clipboard (`wl-copy`).
+- `myos-toggle-idle` / `myos-toggle-nightlight`: Toggle `swayidle` caffeine mode and `wlsunset` warm temperature (with `status` query).
+- `myos-launch-tui` / `myos-webapp`: Standardized floating `foot` TUI wrapper (`app_id=myos-tui`) and frameless Brave `--app=` `.desktop` manager.
+- `myos-update`: LVM pre-upgrade snapshot guard (`ubuntu-vg/myos-pre-*`, `8G`, keep 2, VG free-space check) before `apt upgrade`.
 
 ### Workspace `.env` Helpers (`env*`)
 
@@ -90,6 +100,7 @@ Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encr
 
 ## Updates
 
+- `feat(myos-bin): add modular myos-* CLI toolbox, unified wofi menu, LVM update guard, and myosBinGuide.md`; `2026-11-20 11:46 KST`
 - `feat(security): deploy auditd+usbguard+DoT+MAC-rand, Waybar net toggle, root pinentry, and myosSweeper HIDS fixes`; `2026-11-19 18:48 KST`
 - `feat(hardening): add reproducible laptop-only SSHD, sysctl, UFW, and JavaCard confirm baseline`; `2026-11-19 10:18 KST`
 - `fix(shell): guard bash-only env-helpers.sh in .profile for dash/tuigreet`; `2026-11-17 17:41 KST`

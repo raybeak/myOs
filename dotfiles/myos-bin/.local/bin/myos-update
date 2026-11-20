@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# myos-update — LVM pre-upgrade snapshot guard for Ubuntu apt upgrades.
+# Usage: myos-update [--dry-run] [--list] [--prune] [--size 8G] [--keep 2]
+# Safety:
+#   - Serialized via flock to prevent concurrent runs and snapshot name collisions.
+#   - Validates --size and verifies VG free space >= (snapshot_size + 2 GiB reserve) in MiB BEFORE any mutation.
+#   - Creates the new snapshot FIRST and only prunes excess old snapshots AFTER lvcreate succeeds.
+#   - Checks snapshot health (lv_attr invalid flag & data_percent) AFTER apt-get upgrade.
+#   - Does NOT run 'apt autoremove' automatically so /boot (non-LVM) retains prior kernels.
+set -euo pipefail
+
+VG_NAME="${MYOS_VG_NAME:-ubuntu-vg}"
+ROOT_LV="${MYOS_ROOT_LV:-ubuntu-lv}"
+SNAP_PREFIX="myos-pre-"
+SNAP_SIZE="8G"
+RESERVE_MIB=2048
+KEEP_COUNT=2
+DRY_RUN=false
+ACTION="upgrade"
+LOCK_DIR="${XDG_RUNTIME_DIR:?Error: XDG_RUNTIME_DIR must be set}"
+LOCK_FILE="${LOCK_DIR}/myos-update.lock"
+
+usage() {
+  cat <<'EOF'
+Usage: myos-update [options]
+  --dry-run       Preview LVM snapshot and apt commands without modifying the system
+  --list          List existing myos-pre-* LVM snapshots and VG free space
+  --prune         Prune old myos-pre-* snapshots down to --keep count
+  --size <size>   Snapshot CoW size in G or M (default: 8G)
+  --keep <n>      Max myos-pre-* snapshots to retain (default: 2)
+  -h, --help      Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run) DRY_RUN=true; shift ;;
+    --list)    ACTION="list"; shift ;;
+    --prune)   ACTION="prune"; shift ;;
+    --size)    SNAP_SIZE="${2:?missing --size value}"; shift 2 ;;
+    --keep)    KEEP_COUNT="${2:?missing --keep value}"; shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Error: unknown option '$1'." >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+if [[ ! "$KEEP_COUNT" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Error: --keep must be a positive integer." >&2
+  exit 2
+fi
+
+size_to_mib() {
+  local raw="$1"
+  local size_re='^([1-9][0-9]*)([GgMm])$'
+  if [[ ! "$raw" =~ $size_re ]]; then
+    echo "Error: --size must be an integer with G or M suffix (e.g., 8G, 4096M; got '$raw')." >&2
+    exit 2
+  fi
+  local num="${BASH_REMATCH[1]}"
+  local unit="${BASH_REMATCH[2]}"
+  case "$unit" in
+    G|g) echo $((num * 1024)) ;;
+    M|m) echo "$num" ;;
+  esac
+}
+
+SNAP_MIB="$(size_to_mib "$SNAP_SIZE")"
+REQUIRED_MIB=$((SNAP_MIB + RESERVE_MIB))
+
+run_cmd() {
+  if $DRY_RUN; then
+    echo "[DRY-RUN] $*"
+  else
+    "$@"
+  fi
+}
+
+list_snaps() {
+  sudo lvs --noheadings -o lv_name --sort lv_time "$VG_NAME" 2>/dev/null \
+    | awk -v pfx="$SNAP_PREFIX" '{gsub(/^[[:space:]]+|[[:space:]]+$/, ""); if (index($0, pfx) == 1) print $0}'
+}
+
+prune_snaps() {
+  local target_keep="$1"
+  local protect="${2:-}"
+  if $DRY_RUN; then
+    echo "[DRY-RUN] Prune ${SNAP_PREFIX}* snapshots in ${VG_NAME} to keep newest ${target_keep}${protect:+ (protecting $protect)}"
+    return 0
+  fi
+  mapfile -t snaps < <(list_snaps)
+  local count="${#snaps[@]}"
+  if ((count <= target_keep)); then
+    return 0
+  fi
+  local remove_n=$((count - target_keep))
+  local removed=0
+  local s
+  for s in "${snaps[@]}"; do
+    ((removed >= remove_n)) && break
+    if [[ -n "$protect" && "$s" == "$protect" ]]; then
+      continue
+    fi
+    echo "[INFO] Pruning old snapshot: ${VG_NAME}/${s}"
+    sudo lvremove -f "/dev/${VG_NAME}/${s}"
+    ((removed++))
+  done
+}
+
+acquire_lock() {
+  umask 077
+  if [[ -L "$LOCK_FILE" ]]; then
+    echo "Error: refusing symlinked lock file: $LOCK_FILE" >&2
+    exit 1
+  fi
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || { echo "Error: another myos-update instance is running." >&2; exit 1; }
+}
+
+case "$ACTION" in
+  list)
+    echo "=== VG Free Space (${VG_NAME}) ==="
+    sudo vgs -o vg_name,vg_size,vg_free "$VG_NAME"
+    echo "=== myOs Snapshots (${SNAP_PREFIX}*) ==="
+    sudo lvs -o lv_name,lv_size,lv_attr,data_percent,origin,lv_time "$VG_NAME" \
+      | awk -v pfx="$SNAP_PREFIX" 'NR==1 || $1 ~ ("^" pfx)'
+    exit 0
+    ;;
+  prune)
+    acquire_lock
+    prune_snaps "$KEEP_COUNT"
+    exit 0
+    ;;
+esac
+
+acquire_lock
+
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+SNAP_NAME="${SNAP_PREFIX}${TIMESTAMP}"
+
+echo "=== [1/5] Pre-flight VG free-space check (need >= ${REQUIRED_MIB} MiB: ${SNAP_SIZE} + 2G reserve) ==="
+if $DRY_RUN; then
+  echo "[DRY-RUN] Check vgs free space on ${VG_NAME} >= ${REQUIRED_MIB} MiB (without pruning first)"
+else
+  VG_FREE_RAW="$(sudo vgs --noheadings --units m --nosuffix -o vg_free "$VG_NAME" | tr -d '[:space:]')"
+  VG_FREE_MIB="${VG_FREE_RAW%%.*}"
+  if [[ -z "$VG_FREE_MIB" ]] || ((VG_FREE_MIB < REQUIRED_MIB)); then
+    echo "Error: insufficient VG free space on ${VG_NAME} (${VG_FREE_RAW} MiB < ${REQUIRED_MIB} MiB required)." >&2
+    echo "No existing snapshots were deleted. Run 'myos-update --list' or 'myos-update --prune' first." >&2
+    exit 1
+  fi
+  if sudo lvs "/dev/${VG_NAME}/${SNAP_NAME}" >/dev/null 2>&1; then
+    echo "Error: snapshot ${VG_NAME}/${SNAP_NAME} already exists; retry in 1 second." >&2
+    exit 1
+  fi
+  echo "[INFO] VG ${VG_NAME} free space: ${VG_FREE_MIB} MiB (OK)"
+fi
+
+echo "=== [2/5] Creating LVM snapshot: ${VG_NAME}/${SNAP_NAME} (${SNAP_SIZE}) ==="
+run_cmd sudo lvcreate --snapshot --name "$SNAP_NAME" --size "$SNAP_SIZE" "/dev/${VG_NAME}/${ROOT_LV}"
+
+if ! $DRY_RUN; then
+  trap 'echo "[WARN] Upgrade interrupted/failed. Snapshot preserved: /dev/${VG_NAME}/${SNAP_NAME} (merge with: sudo lvconvert --merge /dev/${VG_NAME}/${SNAP_NAME} && sudo reboot)" >&2' ERR
+fi
+
+echo "=== [3/5] Pruning old snapshots beyond --keep ${KEEP_COUNT} ==="
+prune_snaps "$KEEP_COUNT" "$SNAP_NAME"
+
+echo "=== [4/5] Running apt update && apt upgrade (no autoremove) ==="
+run_cmd sudo apt-get update
+run_cmd sudo apt-get upgrade -y
+
+trap - ERR
+
+echo "=== [5/5] Post-upgrade snapshot health check ==="
+if $DRY_RUN; then
+  echo "[DRY-RUN] Verify lv_attr and snap_percent/data_percent of /dev/${VG_NAME}/${SNAP_NAME}"
+  SNAP_HEALTH="DRY_RUN"
+else
+  SNAP_INFO="$(sudo lvs --noheadings --nosuffix -o lv_attr,snap_percent,data_percent "/dev/${VG_NAME}/${SNAP_NAME}" 2>/dev/null | xargs || true)"
+  SNAP_ATTR="$(awk '{print $1}' <<<"$SNAP_INFO")"
+  SNAP_PCT="$(awk '{print ($2 != "" && $2 != "-") ? $2 : $3}' <<<"$SNAP_INFO")"
+  SNAP_PCT_INT="${SNAP_PCT%%.*}"
+  if [[ -z "$SNAP_ATTR" ]] || [[ "${SNAP_ATTR:4:1}" == "I" ]] || [[ ! "$SNAP_PCT_INT" =~ ^[0-9]+$ ]] || ((SNAP_PCT_INT >= 100)); then
+    echo "[WARN] Snapshot /dev/${VG_NAME}/${SNAP_NAME} is INVALID, full, or unreadable (lv_attr=${SNAP_ATTR:-missing}, usage=${SNAP_PCT:-unknown}%)." >&2
+    echo "[WARN] Rollback via this snapshot is NOT available. Remove it with: sudo lvremove -f /dev/${VG_NAME}/${SNAP_NAME}" >&2
+    SNAP_HEALTH="INVALID"
+  else
+    echo "[INFO] Snapshot healthy: lv_attr=${SNAP_ATTR}, CoW usage=${SNAP_PCT}%"
+    if ((SNAP_PCT_INT >= 90)); then
+      echo "[WARN] Snapshot CoW usage is >= 90% (${SNAP_PCT}%). Consider pruning soon or using a larger --size." >&2
+    fi
+    SNAP_HEALTH="OK"
+  fi
+fi
+
+if ! $DRY_RUN && [[ "$SNAP_HEALTH" == "OK" ]]; then
+  cat <<EOF
+Snapshot ready: /dev/${VG_NAME}/${SNAP_NAME}
+Rollback procedure (partial rollback — root LV only; /boot is on separate non-LVM nvme0n1p2):
+  1. sudo lvconvert --merge /dev/${VG_NAME}/${SNAP_NAME}   # schedules merge for next boot (not immediate)
+  2. sudo reboot                                           # merge executes during root mount
+  3. If a kernel/initramfs upgrade occurred, select the previous kernel entry in GRUB.
+EOF
+fi

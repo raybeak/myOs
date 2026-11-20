@@ -43,6 +43,8 @@ client.unfocused        #333333 #111111 #777777 #333333   #333333
 ### Floating-first rules
 # Wayland-native apps
 for_window [app_id=".*"] floating enable, resize set 800 600, move position center
+# Standardized TUI launcher windows (myos-launch-tui)
+for_window [app_id="myos-tui"] floating enable, resize set 960 640, move position center
 # XWayland apps
 for_window [class=".*"] floating enable, resize set 800 600, move position center
 
@@ -68,6 +70,7 @@ exec lxqt-policykit-agent
 ### Core keybindings
 bindsym $mod+Return exec $term
 bindsym $mod+d exec $menu
+bindsym $mod+Mod1+space exec ~/.local/bin/myos-menu
 bindsym $mod+Shift+q kill
 bindsym $mod+Shift+c reload
 bindsym $mod+Escape exec ~/.config/sway/scripts/power.sh
@@ -166,8 +169,9 @@ bindsym XF86AudioPlay exec playerctl play-pause
 bindsym XF86AudioNext exec playerctl next
 bindsym XF86AudioPrev exec playerctl previous
 
-# Screenshot: region -> file
-bindsym Print exec grim -g "$(slurp)" ~/Pictures/shot-$(date +%Y%m%d-%H%M%S).png
+# Screenshot: save to ~/photo/screenshots + copy to clipboard
+bindsym Print exec ~/.local/bin/myos-screenshot region
+bindsym Shift+Print exec ~/.local/bin/myos-screenshot full
 
 ### Bar
 bar {

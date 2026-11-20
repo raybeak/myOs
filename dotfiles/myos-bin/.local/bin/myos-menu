@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# myos-menu — Unified text-only action center for myOs (wofi --dmenu).
+# Usage: myos-menu [--keybindings]
+# Dependencies: wofi, myos-toggle-idle, myos-toggle-nightlight, myos-screenshot, myos-launch-tui, myos-webapp
+set -euo pipefail
+
+BIN_DIR="${HOME}/.local/bin"
+SWAY_CFG="${HOME}/.config/sway/config"
+
+run_wofi() {
+  local prompt="$1"
+  local lines="${2:-10}"
+  local width="${3:-380}"
+  wofi --dmenu --prompt "$prompt" --insensitive --lines "$lines" --width "$width"
+}
+
+show_keybindings() {
+  if [[ ! -f "$SWAY_CFG" ]]; then
+    echo "Error: $SWAY_CFG not found." >&2
+    exit 1
+  fi
+  awk '
+    /^[[:space:]]*bindsym[[:space:]]+/ {
+      line = $0
+      sub(/^[[:space:]]*bindsym[[:space:]]+/, "", line)
+      sub(/^--locked[[:space:]]+/, "[locked] ", line)
+      print line
+    }
+  ' "$SWAY_CFG" | run_wofi "KEYS" 18 680 >/dev/null || true
+}
+
+menu_tui() {
+  local bt_cmd="bluetoothctl"
+  command -v bluetui >/dev/null 2>&1 && bt_cmd="bluetui"
+
+  local choice
+  choice="$(printf '%s\n' \
+    "System Monitor (btop)" \
+    "Network (nmtui)" \
+    "Bluetooth (${bt_cmd})" \
+    "Audio (pavucontrol)" \
+    "Journal (journalctl -f)" \
+    "Back" | run_wofi "TUI" 7 320)" || return 0
+
+  case "$choice" in
+    "System Monitor (btop)")   exec "$BIN_DIR/myos-launch-tui" btop ;;
+    "Network (nmtui)")         exec "$BIN_DIR/myos-launch-tui" nmtui ;;
+    "Bluetooth ("*)            exec "$BIN_DIR/myos-launch-tui" "$bt_cmd" ;;
+    "Audio (pavucontrol)")     exec pavucontrol ;;
+    "Journal (journalctl -f)") exec "$BIN_DIR/myos-launch-tui" journalctl -f ;;
+    "Back")                    main_menu ;;
+  esac
+}
+
+menu_webapps() {
+  local apps choice name url
+  apps="$("$BIN_DIR/myos-webapp" list || true)"
+
+  local entries=()
+  if [[ -n "$apps" ]]; then
+    while IFS=$'\t' read -r name url; do
+      [[ -n "$name" ]] && entries+=("Launch: ${name}")
+    done <<<"$apps"
+  fi
+  entries+=("Add Web App" "Remove Web App" "Back")
+
+  choice="$(printf '%s\n' "${entries[@]}" | run_wofi "WEBAPP" 12 360)" || return 0
+
+  case "$choice" in
+    "Launch: "*)
+      name="${choice#Launch: }"
+      exec "$BIN_DIR/myos-webapp" launch "$name"
+      ;;
+    "Add Web App")
+      name="$(printf '' | run_wofi "NAME (A-Za-z0-9_-)" 1 360)" || return 0
+      [[ -z "$name" ]] && return 0
+      url="$(printf '' | run_wofi "URL (https://...)" 1 480)" || return 0
+      [[ -z "$url" ]] && return 0
+      if "$BIN_DIR/myos-webapp" add "$name" "$url"; then
+        command -v notify-send >/dev/null 2>&1 && notify-send "myOs WebApp" "Added: $name"
+      else
+        command -v notify-send >/dev/null 2>&1 && notify-send "myOs WebApp" "Invalid name or URL"
+      fi
+      ;;
+    "Remove Web App")
+      if [[ -z "$apps" ]]; then
+        command -v notify-send >/dev/null 2>&1 && notify-send "myOs WebApp" "No web apps registered"
+        return 0
+      fi
+      name="$(awk -F'\t' '{print $1}' <<<"$apps" | run_wofi "REMOVE" 10 320)" || return 0
+      [[ -z "$name" ]] && return 0
+      "$BIN_DIR/myos-webapp" remove "$name"
+      command -v notify-send >/dev/null 2>&1 && notify-send "myOs WebApp" "Removed: $name"
+      ;;
+    "Back")
+      main_menu
+      ;;
+  esac
+}
+
+menu_system() {
+  local choice
+  choice="$(printf '%s\n' \
+    "myos-update (LVM Guard)" \
+    "myosSweeper Status" \
+    "USBGuard Devices" \
+    "Reload Sway" \
+    "Back" | run_wofi "SYS" 6 340)" || return 0
+
+  case "$choice" in
+    "myos-update (LVM Guard)") exec "$BIN_DIR/myos-launch-tui" --hold "$BIN_DIR/myos-update" ;;
+    "myosSweeper Status")      exec "$BIN_DIR/myos-launch-tui" --hold /opt/myosSweeper/myosSweeper status ;;
+    "USBGuard Devices")        exec "$BIN_DIR/myos-launch-tui" --hold usbguard list-devices ;;
+    "Reload Sway")             swaymsg reload ;;
+    "Back")                    main_menu ;;
+  esac
+}
+
+main_menu() {
+  local idle_state night_state choice
+  idle_state="$("$BIN_DIR/myos-toggle-idle" status 2>/dev/null || echo "?")"
+  night_state="$("$BIN_DIR/myos-toggle-nightlight" status 2>/dev/null || echo "?")"
+
+  choice="$(printf '%s\n' \
+    "Toggle Idle Lock [${idle_state}]" \
+    "Toggle Nightlight [${night_state}]" \
+    "Screenshot (Region)" \
+    "Screenshot (Full)" \
+    "TUI Apps ->" \
+    "Web Apps ->" \
+    "Security & System ->" \
+    "Keybindings" \
+    "Power ->" | run_wofi "MYOS" 10 360)" || exit 0
+
+  case "$choice" in
+    "Toggle Idle Lock "*)  exec "$BIN_DIR/myos-toggle-idle" toggle ;;
+    "Toggle Nightlight "*) exec "$BIN_DIR/myos-toggle-nightlight" toggle ;;
+    "Screenshot (Region)") exec "$BIN_DIR/myos-screenshot" region ;;
+    "Screenshot (Full)")   exec "$BIN_DIR/myos-screenshot" full ;;
+    "TUI Apps ->")         menu_tui ;;
+    "Web Apps ->")         menu_webapps ;;
+    "Security & System ->") menu_system ;;
+    "Keybindings")         show_keybindings ;;
+    "Power ->")            exec "$HOME/.config/sway/scripts/power.sh" ;;
+  esac
+}
+
+case "${1:-}" in
+  --keybindings) show_keybindings ;;
+  -h|--help)     echo "Usage: myos-menu [--keybindings]" ;;
+  *)             main_menu ;;
+esac

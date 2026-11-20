@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# myos-launch-tui — Launch a CLI/TUI command inside a standardized floating foot window.
+# Usage: myos-launch-tui [--hold] <command> [args...]
+# Sway rule: for_window [app_id="myos-tui"] floating enable, resize set 960 640, move position center
+set -euo pipefail
+
+HOLD=false
+if [[ "${1:-}" == "--hold" ]]; then
+  HOLD=true
+  shift
+fi
+
+if [[ $# -eq 0 ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
+  echo "Usage: myos-launch-tui [--hold] <command> [args...]"
+  exit 0
+fi
+
+CMD="$1"
+if ! command -v "$CMD" >/dev/null 2>&1; then
+  echo "Error: command '$CMD' not found in PATH." >&2
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "myOs TUI" "Command not found: $CMD"
+  fi
+  exit 127
+fi
+
+TITLE="TUI: $(basename "$CMD")"
+
+if $HOLD; then
+  exec foot --app-id=myos-tui --title="$TITLE" -- \
+    sh -c '"$@"; rc=$?; printf "\n[exit %d - press Enter to close] " "$rc"; read -r _' _ "$@"
+else
+  exec foot --app-id=myos-tui --title="$TITLE" -- "$@"
+fi
