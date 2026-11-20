@@ -49,9 +49,10 @@
     },
 
     "backlight": {
+        "device": "intel_backlight",
         "format": "BRI: {percent}%",
-        "on-scroll-up": "brightnessctl set 5%+",
-        "on-scroll-down": "brightnessctl set 5%-",
+        "on-scroll-up": "",
+        "on-scroll-down": "",
         "tooltip": false
     },
 
@@ -59,7 +60,8 @@
         "format": "VOL: {volume}%",
         "format-muted": "VOL: MUTE",
         "format-bluetooth": "VOL: {volume}% BT",
-        "scroll-step": 5,
+        "on-scroll-up": "",
+        "on-scroll-down": "",
         "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-click-right": "pavucontrol",
         "tooltip": false

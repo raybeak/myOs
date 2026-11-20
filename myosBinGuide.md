@@ -10,6 +10,7 @@ All utilities adhere to `myOs` invariants: no new packages beyond `packagesV2.tx
 - `MYOS_NIGHTLIGHT_TEMP`: Color temperature in Kelvin, integer `1000..9999` (default: `4000`).
 - `MYOS_WEBAPP_BROWSER`: Browser executable name/path validated against `^[A-Za-z0-9._/-]+$` (default: `brave-browser`).
 - `MYOS_VG_NAME` / `MYOS_ROOT_LV`: LVM VG and root LV names (default: `ubuntu-vg` / `ubuntu-lv`).
+- `MYOS_BACKLIGHT_DEV` / `MYOS_BACKLIGHT_MIN_PCT`: Backlight sysfs device (default: `intel_backlight`) and minimum brightness floor percent `1..50` (default: `2`).
 
 ### Uninstall / Rollback of Toolbox
 
@@ -115,3 +116,16 @@ All utilities adhere to `myOs` invariants: no new packages beyond `packagesV2.tx
   2. `sudo reboot` (merge executes on next boot during root mount).
   3. **Limitation (`/boot` outside LVM)**: `/boot` resides on `nvme0n1p2` (non-LVM ext4) and is not rolled back by LVM merge. Because `myos-update` skips `apt autoremove`, prior kernel images remain in `/boot`; select the previous kernel in GRUB if a kernel/initramfs upgrade occurred.
 - **Verification**: `myos-update --dry-run` (and `myos-update --list` to inspect snapshots).
+
+---
+
+## 8. `myos-brightness` — Logind Seat-Scoped Backlight Control
+
+- **Path**: `dotfiles/myos-bin/.local/bin/myos-brightness`
+- **Keybindings**: `XF86MonBrightnessUp` (`Fn+F3`) -> `myos-brightness up 5`; `XF86MonBrightnessDown` (`Fn+F2`) -> `myos-brightness down 5`
+- **Usage**: `myos-brightness [up [pct]|down [pct]|set <pct>|get]`
+- **Behavior**:
+  - Reads current/max brightness from `/sys/class/backlight/${MYOS_BACKLIGHT_DEV}` and writes via `busctl call org.freedesktop.login1 /org/freedesktop/login1/session/auto org.freedesktop.login1.Session SetBrightness` (falling back to the user's active seated `loginctl` session).
+  - Avoids adding the user to the `video` group (keeps `/dev/video*` unexposed) while working around Ubuntu's `brightnessctl` lacking `libsystemd` support.
+  - Enforces a configurable minimum brightness floor (`MYOS_BACKLIGHT_MIN_PCT`, default `2%`) to prevent accidental `0%` screen blackout.
+- **Verification**: `myos-brightness get && myos-brightness down 5 && myos-brightness up 5`
