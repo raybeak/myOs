@@ -208,9 +208,12 @@ if [[ -f "$REPO_DIR/servicesV2.txt" ]]; then
   done <"$REPO_DIR/servicesV2.txt"
 fi
 
-echo "=== [7/8] Setting default editor (micro) ==="
+echo "=== [7/8] Setting default editor (micro) & terminal (foot) ==="
 if command -v micro >/dev/null 2>&1; then
   run_cmd sudo update-alternatives --set editor /usr/bin/micro || true
+fi
+if command -v foot >/dev/null 2>&1; then
+  run_cmd sudo update-alternatives --set x-terminal-emulator /usr/bin/foot || true
 fi
 run_cmd git config --global core.editor micro
 
