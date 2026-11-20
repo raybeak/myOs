@@ -156,3 +156,19 @@ All utilities adhere to `myOs` invariants: no new packages beyond `packagesV2.tx
   - Presents the output switcher menu via `wofi --dmenu` and applies the selected output action.
   - Zero extra dependencies: reuses the existing toolbox stack (`swaymsg`, `wofi`); no new packages beyond `packagesV2.txt`.
 - **Verification**: `myos-display` with an external monitor connected -> confirm the `wofi` menu lists outputs and the selected action applies
+
+---
+
+## 11. `myos-toggle-charge` — Battery Care (80%) / Full Charge (100%) Toggle
+
+- **Path**: `dotfiles/myos-bin/.local/bin/myos-toggle-charge`
+- **Keybinding**: `Fn+F1` (`XF86Launch6`, keycode `193`) -> `myos-toggle-charge toggle`
+- **Usage**: `myos-toggle-charge [toggle|full|care|status]`
+- **Behavior**:
+  - Toggles between Battery Care at 80% and Full Charge at 100%; `care`, `full`, and `status` select or query each mode directly.
+  - LG gram 16ZD90P (`lg_laptop` + TLP 1.8.0) EC accepts only `80` or `100` at `/sys/class/power_supply/CMB0/charge_control_end_threshold`; `85` is rejected with `-EINVAL`.
+  - Baseline `/etc/tlp.d/90-gram.conf` sets `STOP_CHARGE_THRESH_BAT0="80"`. `tlp setcharge 0 100` is a temporary override (works on both AC and battery) and auto-reverts to 80% on reboot.
+- **Security model**:
+  - Root-owned `/usr/local/sbin/myos-battery-ctl` (installed `0755 root:root`) accepts only `care` (`tlp setcharge`) or `full` (`tlp setcharge 0 100`) or `status`.
+  - `etc/sudoers.d/myos-battery` (`0440 root:root`) uses a strict sudoers allowlist for only `care` and `full`, with no wildcards.
+- **Verification**: `visudo -cf /etc/sudoers.d/myos-battery`; run `myos-toggle-charge status`, then `myos-toggle-charge care` / `full` and confirm the hardware threshold is `80` / `100` respectively.

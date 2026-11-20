@@ -66,7 +66,7 @@ group-remove dip
 #     zram-size = ram / 2
 #     compression-algorithm = zstd
 # etc/tlp.d/90-gram.conf
-#     STOP_CHARGE_THRESH_BAT0="1"     # LG: 1 = 80% 충전 제한
+#     STOP_CHARGE_THRESH_BAT0="80"    # LG: 80 = Battery Care ON, 100 = Full Charge
 # dotfiles/gnupg/.gnupg/gpg-agent.conf
 #     enable-ssh-support
 #     pinentry-program /usr/bin/pinentry-qt

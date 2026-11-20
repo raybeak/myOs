@@ -112,6 +112,19 @@ if [[ -f "$REPO_DIR/etc/sudoers.d/ssh-agent" ]]; then
   run_cmd sudo install -Dm440 "$REPO_DIR/etc/sudoers.d/ssh-agent" /etc/sudoers.d/ssh-agent
   run_cmd sudo visudo -cf /etc/sudoers.d/ssh-agent
 fi
+if [[ -f "$REPO_DIR/etc/local-sbin/myos-battery-ctl" ]]; then
+  run_cmd sudo install -Dm755 -o root -g root "$REPO_DIR/etc/local-sbin/myos-battery-ctl" /usr/local/sbin/myos-battery-ctl
+fi
+if [[ -f "$REPO_DIR/etc/sudoers.d/myos-battery" ]]; then
+  run_cmd sudo install -Dm440 -o root -g root "$REPO_DIR/etc/sudoers.d/myos-battery" /etc/sudoers.d/myos-battery
+  if run_cmd sudo visudo -cf /etc/sudoers.d/myos-battery; then
+    :
+  else
+    echo "[ERROR] sudoers validation failed for /etc/sudoers.d/myos-battery; removing it to avoid total sudo breakage."
+    run_cmd sudo rm -f /etc/sudoers.d/myos-battery
+    exit 1
+  fi
+fi
 if [[ -f "$REPO_DIR/etc/security/authorized_keys" ]]; then
   run_cmd sudo install -Dm644 "$REPO_DIR/etc/security/authorized_keys" /etc/security/authorized_keys
   for pam_file in /etc/pam.d/sudo /etc/pam.d/sudo-i; do

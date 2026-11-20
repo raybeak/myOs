@@ -1,0 +1,2 @@
+# MyOS: LG gram battery charge limit control (strict allowlist, no wildcards)
+raybeak ALL=(root) NOPASSWD: /usr/local/sbin/myos-battery-ctl care, /usr/local/sbin/myos-battery-ctl full

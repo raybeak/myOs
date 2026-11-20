@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# myos-battery-ctl — root-only helper for LG gram battery charge limit control.
+# Invoked via passwordless sudo with a strict allowlist (/etc/sudoers.d/myos-battery):
+#   care   -> restore 80% limit from /etc/tlp.d/90-gram.conf (Battery Care ON)
+#   full   -> temporarily charge to 100% (reverts to 80% Care on reboot)
+#   status -> print current charge_control_end_threshold (80 or 100)
+# LG gram 16ZD90P EC quirk: STOP_CHARGE_THRESH_BAT0 accepts ONLY 80 or 100 (85 = -EINVAL).
+set -euo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+SYSFS="/sys/class/power_supply/CMB0/charge_control_end_threshold"
+
+if (($# != 1)); then
+  echo "Usage: myos-battery-ctl [care|full|status]" >&2
+  exit 2
+fi
+
+case "$1" in
+  care)
+    tlp setcharge >/dev/null
+    ;;
+  full)
+    tlp setcharge 0 100 >/dev/null
+    ;;
+  status)
+    cat "$SYSFS"
+    ;;
+  *)
+    echo "Error: unknown action '$1' (expected care|full|status)." >&2
+    exit 2
+    ;;
+esac

@@ -172,6 +172,8 @@ bindsym XF86AudioPrev exec playerctl previous
 bindsym XF86TouchpadToggle exec ~/.local/bin/myos-toggle-touchpad toggle
 bindsym $mod+p exec ~/.local/bin/myos-display
 bindsym XF86Launch5 exec ~/.local/bin/myos-toggle-nightlight toggle
+# Fn+F1: toggle battery charge limit (80% Care <-> 100% temporary Full)
+bindsym XF86Launch6 exec ~/.local/bin/myos-toggle-charge toggle
 
 # Screenshot: save to ~/photo/screenshots + copy to clipboard
 bindsym Print exec ~/.local/bin/myos-screenshot region

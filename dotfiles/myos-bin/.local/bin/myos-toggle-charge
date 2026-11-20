@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# myos-toggle-charge — Toggle LG gram battery charge limit between Care (80%) and Full (100%).
+# Usage: myos-toggle-charge [toggle|full|care|status]
+# Root work is delegated to /usr/local/sbin/myos-battery-ctl via passwordless sudo
+# (strict allowlist: /etc/sudoers.d/myos-battery). 100% mode is temporary; tlp
+# reverts to the 80% Care limit from /etc/tlp.d/90-gram.conf on reboot.
+set -euo pipefail
+
+SYSFS="/sys/class/power_supply/CMB0/charge_control_end_threshold"
+CTL="/usr/local/sbin/myos-battery-ctl"
+
+notify() {
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "myOs Battery" "$1"
+  fi
+}
+
+read_threshold() {
+  # Sysfs node is world-readable; values: 80 (Care ON) or 100 (Full Charge)
+  if [[ ! -r "$SYSFS" ]]; then
+    echo "Error: $SYSFS not readable (lg_laptop kernel module / LG gram required)." >&2
+    exit 1
+  fi
+  tr -d '[:space:]' <"$SYSFS"
+}
+
+describe() {
+  case "$1" in
+    80) echo "80% (CARE)" ;;
+    100) echo "100% (FULL)" ;;
+    *) echo "${1}%" ;;
+  esac
+}
+
+do_run() {
+  local err
+  if ! err="$(sudo -n "$CTL" "$1" 2>&1)"; then
+    echo "Error: failed to run '$CTL $1': ${err:-unknown error}" >&2
+    notify "Error: battery control failed"
+    exit 1
+  fi
+}
+
+ACTION="${1:-toggle}"
+
+case "$ACTION" in
+  status)
+    echo "$(describe "$(read_threshold)")"
+    ;;
+  toggle)
+    # 80 (Care) -> switch to 100 (Full); anything else -> back to 80 (Care)
+    case "$(read_threshold)" in
+      80) do_run full ;;
+      *) do_run care ;;
+    esac
+    ;;
+  full)
+    do_run full
+    ;;
+  care)
+    do_run care
+    ;;
+  -h|--help)
+    echo "Usage: myos-toggle-charge [toggle|full|care|status]"
+    ;;
+  *)
+    echo "Error: unknown action '$ACTION'." >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$ACTION" == "toggle" || "$ACTION" == "full" || "$ACTION" == "care" ]]; then
+  new_val="$(read_threshold)"
+  case "$new_val" in
+    100) notify "Charge limit: 100% (FULL - temporary)" ;;
+    80) notify "Charge limit: 80% (CARE)" ;;
+    *) notify "Charge limit: $(describe "$new_val")" ;;
+  esac
+fi

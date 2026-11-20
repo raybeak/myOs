@@ -74,7 +74,7 @@ sudo reboot
 
 - `bootstrap.sh`: Idempotent 8-stage installer (`remove.txt` -> `packagesV2.txt` -> external tools -> `stow` -> `/etc` & `UFW` baseline -> `servicesV2.txt` -> `micro` default -> `NetworkManager` cutover).
 - `dotfiles/`: GNU `stow` packages (`sway`, `waybar`, `swaync`, `foot`, `micro`, `fcitx5`, `gnupg` with `--no-folding`, `myos-bin` with `--no-folding`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0`).
-- `etc/`: System configs (`greetd/config.toml`, `netplan/01-nm.yaml`, `systemd/zram-generator.conf`, `tlp.d/90-gram.conf`, `sudoers.d/ssh-agent`, `security/authorized_keys`, `ssh/sshd_config.d/01-hardening.conf`, `sysctl.d/99-hardening.conf`).
+- `etc/`: System configs (`greetd/config.toml`, `netplan/01-nm.yaml`, `systemd/zram-generator.conf`, `tlp.d/90-gram.conf`, `sudoers.d/ssh-agent`, `sudoers.d/myos-battery`, `local-sbin/myos-battery-ctl`, `security/authorized_keys`, `ssh/sshd_config.d/01-hardening.conf`, `sysctl.d/99-hardening.conf`).
 - `sweeper/`: Standalone `/` security delta collector, rule floor, local/Tailscale triage, and `systemd` timers.
 - `gate2JavaCardStarter.md` / `gate3SweeperStarter.md` / `myosBinGuide.md`: Module setup & operational guides.
 
@@ -87,6 +87,7 @@ Modular text-only desktop & system utilities stowed via `dotfiles/myos-bin` (`--
 - `myos-toggle-idle` / `myos-toggle-nightlight`: Toggle `swayidle` caffeine mode and `wlsunset` warm temperature (with `status` query).
 - `myos-brightness` (`Fn+F2` / `Fn+F3`): Logind seat-scoped backlight control (5% grid snap, `2%` floor, `--locked`).
 - `myos-toggle-touchpad` (`Fn+F5`): Sway touchpad toggle with logind `tpad_led` LED sync (zero-root).
+- `myos-toggle-charge` (`Fn+F1`): Toggle LG battery care (80%) and full charge (100%).
 - `myos-display` (`Fn+F7` / `$mod+p`): Sway-native `get_outputs` + `wofi` output switcher.
 - `myos-launch-tui` / `myos-webapp`: Standardized floating `foot` TUI wrapper (`app_id=myos-tui`) and frameless Brave `--app=` `.desktop` manager.
 - `myos-update`: LVM pre-upgrade snapshot guard (`ubuntu-vg/myos-pre-*`, `8G`, keep 2, VG free-space check) before `apt upgrade`.
@@ -95,7 +96,7 @@ Modular text-only desktop & system utilities stowed via `dotfiles/myos-bin` (`--
 
 Live-verified via `xev` + hardware testing; hardware keys bind in `dotfiles/sway/.config/sway/config`:
 
-- `Fn+F1` (`XF86Launch6`, keycode `193`): Reserved / unassigned (free slot).
+- `Fn+F1` (`XF86Launch6`, keycode `193`): `myos-toggle-charge toggle` (80% Battery Care <-> 100% Full Charge temporary override via root-owned `/usr/local/sbin/myos-battery-ctl`).
 - `Fn+F2` / `Fn+F3` (`XF86MonBrightnessDown` / `XF86MonBrightnessUp`): `myos-brightness down|up 5` (logind D-Bus, 5% grid snap, 2% floor, `--locked`).
 - `Fn+F4`: EC-swallowed, no userspace event (unused).
 - `Fn+F5` (`XF86TouchpadToggle`, keycode `199`): `myos-toggle-touchpad toggle` (Sway touchpad toggle + logind `tpad_led` LED sync, zero-root).
@@ -118,6 +119,7 @@ Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encr
 
 ## Updates
 
+- `feat(battery): add Fn+F1 myos-toggle-charge (80% Care <-> 100% temporary Full) with root-owned helper and strict sudoers`; `2026-11-20 15:18 KST`
 - `feat(fn-keys): add myos-toggle-touchpad, myos-display, 3750K nightlight, and LG gram Fn keymap docs`; `2026-11-20 15:06 KST`
 - `feat(myos-bin): add modular myos-* CLI toolbox, unified wofi menu, LVM update guard, and myosBinGuide.md`; `2026-11-20 11:46 KST`
 - `feat(security): deploy auditd+usbguard+DoT+MAC-rand, Waybar net toggle, root pinentry, and myosSweeper HIDS fixes`; `2026-11-19 18:48 KST`
