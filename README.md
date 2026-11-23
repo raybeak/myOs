@@ -1,5 +1,7 @@
 # myOs
 
+> [한글 설명서](readmeKR.md)
+
 A minimal, reproducible, **CLI-first Sway desktop** built on **Ubuntu Server 26.04.1 LTS Minimal** (`Linux 7.0`), engineered for low-RAM hardware (**8GB soldered RAM**, `LG gram 16ZD90P-GX7BK`) with hardware-backed JavaCard authentication and an autonomous `/` security sweeper.
 
 ---
@@ -170,8 +172,8 @@ Defined in `justfile` (read-only checks; zero `sudo` or system mutation):
 
 ## Updates
 
+- `docs(readme): add full Korean documentation (readmeKR.md) and link from README.md`; `2026-11-23 18:21 KST`
 - `docs(readme): document justfile verification recipes`; `2026-11-23 12:08 KST`
-
 - `feat(dev): add justfile verification entrypoint and dev CLI packages (just, shellcheck, shfmt, git-delta, gh)`; `2026-11-23 12:02 KST`
 - `docs(readme): replace Fn-only keymap with unified Sway and LG gram Fn keymap`; `2026-11-23 10:27 KST`
 - `chore(myos): wire new controls into myos-menu, prune legacy waybar scripts, audit packagesV2, and add recoveryRunbook.md`; `2026-11-20 15:25 KST`
