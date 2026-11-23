@@ -155,9 +155,22 @@ Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encr
 - `envview [src]`: Decrypts `.env.gpg` directly to stdout without writing plaintext to disk.
 - `envrun <command> [args...]`: Decrypts `.env.gpg` in memory and injects variables into an isolated subshell for `<command>` (`ENV_GPG_FILE` overrides path).
 
+### Verification Entrypoint (`just`)
+
+Defined in `justfile` (read-only checks; zero `sudo` or system mutation):
+
+- `just` / `just --list`: List available verification recipes.
+- `just check`: Run the full read-only verification suite (`lint-sh` + `lint-sway` + `eval-sweeper`).
+- `just lint-sh`: Validate POSIX login `.profile` (`sh -n` + `shellcheck -s sh`) and Bash scripts (`bootstrap.sh`, `etc/local-sbin/myos-battery-ctl`, `env-helpers.sh`, `myos-*`, Waybar/Sway scripts).
+- `just lint-sway`: Validate Sway config syntax (`sway -C -c dotfiles/sway/.config/sway/config`).
+- `just check-packages`: Verify every package in `packagesV2.txt` exists in the local `apt` cache (`apt-cache show`).
+- `just eval-sweeper`: Run the `myosSweeper` offline evaluation suite (`sweeper/evals/runEval.py`).
+
 ---
 
 ## Updates
+
+- `docs(readme): document justfile verification recipes`; `2026-11-23 12:08 KST`
 
 - `feat(dev): add justfile verification entrypoint and dev CLI packages (just, shellcheck, shfmt, git-delta, gh)`; `2026-11-23 12:02 KST`
 - `docs(readme): replace Fn-only keymap with unified Sway and LG gram Fn keymap`; `2026-11-23 10:27 KST`
