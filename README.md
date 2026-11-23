@@ -172,6 +172,7 @@ Defined in `justfile` (read-only checks; zero `sudo` or system mutation):
 
 ## Updates
 
+- `feat(flatpak): add flatpak package, Flathub remote, and XDG_DATA_DIRS env`; `2026-11-23 18:24 KST`
 - `docs(readme): add full Korean documentation (readmeKR.md) and link from README.md`; `2026-11-23 18:21 KST`
 - `docs(readme): document justfile verification recipes`; `2026-11-23 12:08 KST`
 - `feat(dev): add justfile verification entrypoint and dev CLI packages (just, shellcheck, shfmt, git-delta, gh)`; `2026-11-23 12:02 KST`
