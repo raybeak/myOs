@@ -92,9 +92,9 @@ Modular text-only desktop & system utilities stowed via `dotfiles/myos-bin` (`--
 - `myos-launch-tui` / `myos-webapp`: Standardized floating `foot` TUI wrapper (`app_id=myos-tui`) and frameless Brave `--app=` `.desktop` manager.
 - `myos-update`: LVM pre-upgrade snapshot guard (`ubuntu-vg/myos-pre-*`, `8G`, keep 2, VG free-space check) before `apt upgrade`.
 
-### Keymap (Sway, `fcitx5` & LG gram `16ZD90P` Fn Keys)
+### Keymap (Sway & LG gram `16ZD90P` Fn Keys)
 
-Defined in `dotfiles/sway/.config/sway/config` and `dotfiles/fcitx5/.config/fcitx5/` (`$mod` = `Mod4` / `Super`); hardware `Fn` keys live-verified via `xev` + hardware testing:
+Defined in `dotfiles/sway/.config/sway/config` (`$mod` = `Mod4` / `Super`); hardware `Fn` keys live-verified via `xev` + hardware testing:
 
 ```text
 === Core & System ===
@@ -142,15 +142,9 @@ Fn+F11 (XF86AudioLowerVolume, --locked)     wpctl set-volume @DEFAULT_AUDIO_SINK
 Fn+F12 (XF86AudioRaiseVolume, --locked)     wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
 XF86AudioMicMute (--locked)                 wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
 XF86AudioPlay / Next / Prev                 playerctl play-pause / next / previous
-
-=== Input Method (fcitx5 + Hangul) ===
-Ctrl+space / Alt+R    trigger IM (fcitx5)
-Super+space           enumerate IM group forward (+ Shift: backward)
-Hangul_Hanja          activate fcitx5; toggle Hanja mode during Hangul (F9 also toggles Hanja)
-Hangul_Romaja         deactivate fcitx5
 ```
 
-- Note: Waybar `VOL:` / `BRI:` modules are read-only (scroll disabled). Under `xkb_layout us` (without `xkb_options`), a physical Hanja key that emits `Control_R` acts as Right Ctrl unless remapped.
+- Note: Waybar `VOL:` / `BRI:` modules are read-only (scroll disabled).
 
 ### Workspace `.env` Helpers (`env*`)
 
@@ -164,7 +158,7 @@ Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encr
 
 ## Updates
 
-- `docs(readme): replace Fn-only keymap with unified Sway, fcitx5, and LG gram Fn keymap`; `2026-11-23 10:23 KST`
+- `docs(readme): replace Fn-only keymap with unified Sway and LG gram Fn keymap`; `2026-11-23 10:27 KST`
 - `chore(myos): wire new controls into myos-menu, prune legacy waybar scripts, audit packagesV2, and add recoveryRunbook.md`; `2026-11-20 15:25 KST`
 - `feat(battery): add Fn+F1 myos-toggle-charge (80% Care <-> 100% temporary Full) with root-owned helper and strict sudoers`; `2026-11-20 15:18 KST`
 - `feat(fn-keys): add myos-toggle-touchpad, myos-display, 3750K nightlight, and LG gram Fn keymap docs`; `2026-11-20 15:06 KST`
