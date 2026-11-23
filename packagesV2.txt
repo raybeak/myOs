@@ -125,6 +125,11 @@ python3-venv
 npm
 adb
 fastboot
+just
+shellcheck
+shfmt
+git-delta
+gh
 
 # --- apps ---
 thunar

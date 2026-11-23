@@ -76,6 +76,7 @@ sudo reboot
 - `dotfiles/`: GNU `stow` packages (`sway`, `waybar`, `swaync`, `foot`, `micro`, `fcitx5`, `gnupg` with `--no-folding`, `myos-bin` with `--no-folding`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0`).
 - `etc/`: System configs (`greetd/config.toml`, `netplan/01-nm.yaml`, `systemd/zram-generator.conf`, `tlp.d/90-gram.conf`, `sudoers.d/ssh-agent`, `sudoers.d/myos-battery`, `local-sbin/myos-battery-ctl`, `security/authorized_keys`, `ssh/sshd_config.d/01-hardening.conf`, `sysctl.d/99-hardening.conf`).
 - `sweeper/`: Standalone `/` security delta collector, rule floor, local/Tailscale triage, and `systemd` timers.
+- `justfile`: Deterministic read-only verification entrypoint (`just check`: `lint-sh`, `lint-sway`, `eval-sweeper`; `just check-packages`).
 - `gate2JavaCardStarter.md` / `gate3SweeperStarter.md` / `myosBinGuide.md` / `recoveryRunbook.md`: Module setup, operational & DR guides.
 
 ### `myOs` CLI Toolbox (`~/.local/bin/myos-*`)
@@ -158,6 +159,7 @@ Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encr
 
 ## Updates
 
+- `feat(dev): add justfile verification entrypoint and dev CLI packages (just, shellcheck, shfmt, git-delta, gh)`; `2026-11-23 12:02 KST`
 - `docs(readme): replace Fn-only keymap with unified Sway and LG gram Fn keymap`; `2026-11-23 10:27 KST`
 - `chore(myos): wire new controls into myos-menu, prune legacy waybar scripts, audit packagesV2, and add recoveryRunbook.md`; `2026-11-20 15:25 KST`
 - `feat(battery): add Fn+F1 myos-toggle-charge (80% Care <-> 100% temporary Full) with root-owned helper and strict sudoers`; `2026-11-20 15:18 KST`
