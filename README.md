@@ -92,20 +92,65 @@ Modular text-only desktop & system utilities stowed via `dotfiles/myos-bin` (`--
 - `myos-launch-tui` / `myos-webapp`: Standardized floating `foot` TUI wrapper (`app_id=myos-tui`) and frameless Brave `--app=` `.desktop` manager.
 - `myos-update`: LVM pre-upgrade snapshot guard (`ubuntu-vg/myos-pre-*`, `8G`, keep 2, VG free-space check) before `apt upgrade`.
 
-### LG gram 16ZD90P Fn Keymap (verified)
+### Keymap (Sway, `fcitx5` & LG gram `16ZD90P` Fn Keys)
 
-Live-verified via `xev` + hardware testing; hardware keys bind in `dotfiles/sway/.config/sway/config`:
+Defined in `dotfiles/sway/.config/sway/config` and `dotfiles/fcitx5/.config/fcitx5/` (`$mod` = `Mod4` / `Super`); hardware `Fn` keys live-verified via `xev` + hardware testing:
 
-- `Fn+F1` (`XF86Launch6`, keycode `193`): `myos-toggle-charge toggle` (80% Battery Care <-> 100% Full Charge temporary override via root-owned `/usr/local/sbin/myos-battery-ctl`).
-- `Fn+F2` / `Fn+F3` (`XF86MonBrightnessDown` / `XF86MonBrightnessUp`): `myos-brightness down|up 5` (logind D-Bus, 5% grid snap, 2% floor, `--locked`).
-- `Fn+F4`: EC-swallowed, no userspace event (unused).
-- `Fn+F5` (`XF86TouchpadToggle`, keycode `199`): `myos-toggle-touchpad toggle` (Sway touchpad toggle + logind `tpad_led` LED sync, zero-root).
-- `Fn+F6`: EC hardware Airplane mode / Wireless hotkeys (do not bind).
-- `Fn+F7` (`Super_L`+`p`, bound as `$mod+p`): `myos-display` (Sway-native `get_outputs` + `wofi` output switcher).
-- `Fn+F8`: EC hardwired keyboard backlight (`0 -> 127 -> 255`, no OS binding needed).
-- `Fn+F9` (`XF86Launch5`, keycode `192`): `myos-toggle-nightlight toggle` (`wlsunset`, zero-root).
-- `Fn+F10` / `Fn+F11` / `Fn+F12` (`XF86AudioMute` / `XF86AudioLowerVolume` / `XF86AudioRaiseVolume`): `wpctl` (`-l 1.0`, `5%+/-`, `--locked`).
-- Note: Waybar `VOL:` / `BRI:` modules are read-only (scroll disabled).
+```text
+=== Core & System ===
+$mod+Return           foot (terminal)
+$mod+d                wofi --show drun --term foot (app launcher)
+$mod+Alt+space        ~/.local/bin/myos-menu (action center; $mod+Mod1+space)
+$mod+Shift+q          kill focused window
+$mod+Shift+c          reload sway config
+$mod+Escape           ~/.config/sway/scripts/power.sh (power menu)
+$mod+Shift+x          swaylock -f -c 000000 (lock screen)
+Print / Shift+Print   ~/.local/bin/myos-screenshot region | full
+
+=== Floating & Window Control ===
+$mod+space            floating toggle
+$mod+Shift+space      focus mode_toggle (floating <-> tiled)
+$mod+f                fullscreen toggle
+$mod+c                move position center
+$mod+m                resize set width 100ppt height 100ppt, move position 0 0
+$mod+Shift+r          resize set 800 600, move position center
+$mod+LeftDrag         move floating window (or drag titlebar without $mod)
+$mod+RightDrag        resize floating window (or drag border without $mod)
+
+=== Focus, Move & Layout ===
+$mod+h/j/k/l (Arrows) focus left / down / up / right
+$mod+Shift+h/j/k/l    move left / down / up / right 20px (or swap when tiled)
+$mod+b / v            splith / splitv
+$mod+s / w / e        layout stacking / tabbed / toggle split
+$mod+a                focus parent
+$mod+1..9, 0          workspace number 1..10 (+ Shift to move container)
+$mod+Shift+minus      move scratchpad ($mod+minus: scratchpad show)
+$mod+r                resize mode (h/j/k/l or Arrows: 20px, Return/Esc: exit)
+
+=== Hardware / Fn Keys (LG gram 16ZD90P) ===
+Fn+F1  (XF86Launch6, kc 193)                myos-toggle-charge toggle (80% <-> 100%, root helper)
+Fn+F2  (XF86MonBrightnessDown, --locked)    myos-brightness down 5 (logind D-Bus, 2% floor)
+Fn+F3  (XF86MonBrightnessUp, --locked)      myos-brightness up 5
+Fn+F4  (EC-swallowed)                       unused (no userspace event)
+Fn+F5  (XF86TouchpadToggle, kc 199)         myos-toggle-touchpad toggle (Sway + logind tpad_led)
+Fn+F6  (EC Airplane/Wireless)               EC-managed (do not bind)
+Fn+F7  (Super_L+p -> $mod+p)                myos-display (Sway get_outputs + wofi)
+Fn+F8  (EC Keyboard Backlight)              EC-managed (0 -> 127 -> 255, no OS binding)
+Fn+F9  (XF86Launch5, kc 192)                myos-toggle-nightlight toggle (wlsunset 3750K)
+Fn+F10 (XF86AudioMute, --locked)            wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+Fn+F11 (XF86AudioLowerVolume, --locked)     wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+Fn+F12 (XF86AudioRaiseVolume, --locked)     wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
+XF86AudioMicMute (--locked)                 wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+XF86AudioPlay / Next / Prev                 playerctl play-pause / next / previous
+
+=== Input Method (fcitx5 + Hangul) ===
+Ctrl+space / Alt+R    trigger IM (fcitx5)
+Super+space           enumerate IM group forward (+ Shift: backward)
+Hangul_Hanja          activate fcitx5; toggle Hanja mode during Hangul (F9 also toggles Hanja)
+Hangul_Romaja         deactivate fcitx5
+```
+
+- Note: Waybar `VOL:` / `BRI:` modules are read-only (scroll disabled). Under `xkb_layout us` (without `xkb_options`), a physical Hanja key that emits `Control_R` acts as Right Ctrl unless remapped.
 
 ### Workspace `.env` Helpers (`env*`)
 
@@ -119,6 +164,7 @@ Defined in `dotfiles/shell/.config/myos/env-helpers.sh` (Dual-Recipient GPG encr
 
 ## Updates
 
+- `docs(readme): replace Fn-only keymap with unified Sway, fcitx5, and LG gram Fn keymap`; `2026-11-23 10:23 KST`
 - `chore(myos): wire new controls into myos-menu, prune legacy waybar scripts, audit packagesV2, and add recoveryRunbook.md`; `2026-11-20 15:25 KST`
 - `feat(battery): add Fn+F1 myos-toggle-charge (80% Care <-> 100% temporary Full) with root-owned helper and strict sudoers`; `2026-11-20 15:18 KST`
 - `feat(fn-keys): add myos-toggle-touchpad, myos-display, 3750K nightlight, and LG gram Fn keymap docs`; `2026-11-20 15:06 KST`
