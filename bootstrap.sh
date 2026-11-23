@@ -45,6 +45,10 @@ fi
 echo "=== [3/8] Installing external repos & CLI tools (non-fatal if repo missing) ==="
 CODENAME="$(. /etc/os-release && echo "${VERSION_CODENAME:-resolute}")"
 
+if command -v flatpak >/dev/null 2>&1; then
+  run_cmd sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || echo "[WARN] Flathub remote-add failed; continue."
+fi
+
 if ! command -v brave-browser >/dev/null 2>&1; then
   run_cmd bash -c "curl -fsS https://dl.brave.com/install.sh | sh" || echo "[WARN] Brave install failed; continue."
 fi

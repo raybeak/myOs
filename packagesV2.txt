@@ -135,6 +135,7 @@ gh
 thunar
 zathura
 rpi-imager
+flatpak
 
 # --- AppImage 실행용 ---
 libfuse2t64
