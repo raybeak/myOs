@@ -45,6 +45,7 @@ firmware-sof-signed
 pipewire
 pipewire-pulse
 wireplumber
+libspa-0.2-bluetooth
 pulseaudio-utils
 pavucontrol
 playerctl
