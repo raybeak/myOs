@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Assuan proxy around pinentry-qt that sets an explicit window title per key/PIN type."""
+import os
 import subprocess
 import sys
 
@@ -31,12 +32,15 @@ def relay_response(proc: subprocess.Popen, forward: bool = True) -> None:
 
 
 def main() -> int:
+    env = os.environ.copy()
+    env.setdefault("QT_SCALE_FACTOR", "1.25")
     proc = subprocess.Popen(
         ["/usr/bin/pinentry-qt", *sys.argv[1:]],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         text=True,
         bufsize=1,
+        env=env,
     )
     greeting = proc.stdout.readline()
     sys.stdout.write(greeting)
