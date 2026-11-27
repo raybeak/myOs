@@ -6,3 +6,8 @@
 -w /etc/systemd/system/ -p wa -k myos_priv
 -w /home/raybeak/.gnupg/gpg-agent.conf -p wa -k myos_priv
 -w /home/raybeak/.gnupg/sshcontrol -p wa -k myos_priv
+-w /usr/local/bin/pinentry-labeled -p wa -k myos_priv
+-w /usr/local/sbin/myos-battery-ctl -p wa -k myos_priv
+-w /etc/usbguard/rules.conf -p wa -k myos_priv
+-w /etc/myosSweeper/trustedkey.gpg -p wa -k myos_priv
+-w /opt/myosSweeper/manifest.sha256 -p wa -k myos_priv

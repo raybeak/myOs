@@ -34,20 +34,44 @@ install -m 755 "$SRC_DIR/waybar/secStatus.sh" "$OPT_DIR/waybar/secStatus.sh"
 echo "=== [3/7] Installing llama-cli (ggml-org/llama.cpp) ==="
 if [[ ! -x "$OPT_DIR/bin/llama-cli" ]]; then
     TMP_LLAMA="$(mktemp -d)"
-    LLAMA_URL="$(curl -fsSL "https://api.github.com/repos/ggml-org/llama.cpp/releases?per_page=10" \
-        | python3 -c 'import json,sys; rels=json.load(sys.stdin); print(next(a["browser_download_url"] for r in rels for a in r.get("assets", []) if a["name"].endswith("-bin-ubuntu-x64.tar.gz")))')"
+    trap 'rm -rf "${TMP_LLAMA:-}"' EXIT
+    read -r LLAMA_URL LLAMA_DIGEST < <(
+        curl -fsSL "https://api.github.com/repos/ggml-org/llama.cpp/releases?per_page=10" \
+            | python3 -c 'import json,sys
+for r in json.load(sys.stdin):
+    for a in r.get("assets", []):
+        if a["name"].endswith("-bin-ubuntu-x64.tar.gz"):
+            print(a["browser_download_url"], a.get("digest") or "")
+            raise SystemExit(0)
+raise SystemExit(1)'
+    )
+    if [[ ! "$LLAMA_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+        echo "[ERR] Upstream llama.cpp release missing valid sha256 digest: '$LLAMA_DIGEST'" >&2
+        exit 1
+    fi
+    LLAMA_EXPECTED_SHA256="${LLAMA_DIGEST#sha256:}"
     curl -fsSL "$LLAMA_URL" -o "$TMP_LLAMA/llama.tar.gz"
+    echo "${LLAMA_EXPECTED_SHA256}  ${TMP_LLAMA}/llama.tar.gz" | sha256sum -c -
     tar -xzf "$TMP_LLAMA/llama.tar.gz" -C "$TMP_LLAMA"
     find "$TMP_LLAMA" -type f \( -name "llama-cli" -o -name "*.so*" \) -exec cp -P {} "$OPT_DIR/bin/" \;
     chmod 755 "$OPT_DIR/bin/llama-cli"
     rm -rf "$TMP_LLAMA"
+    trap - EXIT
 fi
 
 echo "=== [4/7] Downloading Qwen2.5-1.5B-Instruct-Q4_K_M.gguf (~986MB) ==="
 MODEL_FILE="$OPT_DIR/models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+EXPECTED_MODEL_SHA256="6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
 if [[ ! -f "$MODEL_FILE" ]]; then
+    rm -f "${MODEL_FILE}.part"
     curl -fL "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf" \
-        -o "$MODEL_FILE"
+        -o "${MODEL_FILE}.part"
+    if ! echo "${EXPECTED_MODEL_SHA256}  ${MODEL_FILE}.part" | sha256sum -c -; then
+        rm -f "${MODEL_FILE}.part"
+        echo "[ERR] Model SHA-256 verification failed." >&2
+        exit 1
+    fi
+    mv "${MODEL_FILE}.part" "$MODEL_FILE"
 fi
 
 echo "=== [5/7] Pinning SHA-256 hashes ==="

@@ -172,6 +172,7 @@ Defined in `justfile` (read-only checks; zero `sudo` or system mutation):
 
 ## Updates
 
+- `hardening(myos): replace curl|sh with signed keyrings, pin sweeper SHA-256, harden envrun/envlock, sysctl, auditd, sshd, and docker`; `2026-11-27 12:27 KST`
 - `feat(waybar): add read-only network status module between sec and custom/net`; `2026-11-27 12:10 KST`
 - `feat(gnupg): upscale pinentry-qt dialog 1.25x via QT_SCALE_FACTOR`; `2026-11-27 11:30 KST`
 - `style(ui): upscale Waybar/wofi 1.25x, apply Tokyo Night Storm palette (#1f2335), add fonts-hack, and sync foot/sway/thunar prefs`; `2026-11-27 11:25 KST`

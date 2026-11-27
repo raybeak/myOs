@@ -50,11 +50,30 @@ if command -v flatpak >/dev/null 2>&1; then
 fi
 
 if ! command -v brave-browser >/dev/null 2>&1; then
-  run_cmd bash -c "curl -fsS https://dl.brave.com/install.sh | sh" || echo "[WARN] Brave install failed; continue."
+  run_cmd bash -c "
+    sudo install -m 0755 -d /usr/share/keyrings
+    curl -fsSL https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg | sudo tee /usr/share/keyrings/brave-browser-archive-keyring.gpg >/dev/null
+    sudo chmod 0644 /usr/share/keyrings/brave-browser-archive-keyring.gpg
+    cat <<'EOF' | sudo tee /etc/apt/sources.list.d/brave-browser-release.sources >/dev/null
+Types: deb
+URIs: https://brave-browser-apt-release.s3.brave.com
+Suites: stable
+Components: main
+Architectures: amd64 arm64
+Signed-By: /usr/share/keyrings/brave-browser-archive-keyring.gpg
+EOF
+    sudo apt-get update && sudo apt-get install -y brave-browser
+  " || echo "[WARN] Brave install failed; continue."
 fi
 
 if ! command -v tailscale >/dev/null 2>&1; then
-  run_cmd bash -c "curl -fsSL https://tailscale.com/install.sh | sh" || echo "[WARN] Tailscale install failed; continue."
+  run_cmd bash -c "
+    sudo install -m 0755 -d /usr/share/keyrings
+    curl -fsSL \"https://pkgs.tailscale.com/stable/ubuntu/$CODENAME.noarmor.gpg\" | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg >/dev/null
+    sudo chmod 0644 /usr/share/keyrings/tailscale-archive-keyring.gpg
+    echo \"deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/ubuntu $CODENAME main\" | sudo tee /etc/apt/sources.list.d/tailscale.list >/dev/null
+    sudo apt-get update && sudo apt-get install -y tailscale
+  " || echo "[WARN] Tailscale install failed; continue."
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -67,13 +86,19 @@ if ! command -v docker >/dev/null 2>&1; then
     " || echo "[WARN] Docker repo ($CODENAME) install failed; verify manually."
 fi
 
-if [[ ! -x "$TARGET_HOME/.cargo/bin/cargo" ]]; then
-  run_cmd bash -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y" || echo "[WARN] rustup failed."
-fi
+CARGO_BIN=""
 if [[ -x "$TARGET_HOME/.cargo/bin/cargo" ]]; then
-  if ! command -v bluetui >/dev/null 2>&1; then
-    run_cmd "$TARGET_HOME/.cargo/bin/cargo" install bluetui || echo "[WARN] bluetui cargo install failed; waybar falls back to bluetoothctl."
+  CARGO_BIN="$TARGET_HOME/.cargo/bin/cargo"
+elif command -v cargo >/dev/null 2>&1; then
+  CARGO_BIN="$(command -v cargo)"
+else
+  run_cmd sudo apt-get install -y cargo || echo "[WARN] apt cargo install failed."
+  if command -v cargo >/dev/null 2>&1; then
+    CARGO_BIN="$(command -v cargo)"
   fi
+fi
+if [[ -n "$CARGO_BIN" ]] && ! command -v bluetui >/dev/null 2>&1; then
+  run_cmd "$CARGO_BIN" install bluetui || echo "[WARN] bluetui cargo install failed; waybar falls back to bluetoothctl."
 fi
 
 echo "=== [4/8] Creating base directories & stowing dotfiles ==="
@@ -113,8 +138,12 @@ if [[ -f "$REPO_DIR/etc/tlp.d/90-gram.conf" ]]; then
   run_cmd sudo install -Dm644 "$REPO_DIR/etc/tlp.d/90-gram.conf" /etc/tlp.d/90-gram.conf
 fi
 if [[ -f "$REPO_DIR/etc/sudoers.d/ssh-agent" ]]; then
-  run_cmd sudo install -Dm440 "$REPO_DIR/etc/sudoers.d/ssh-agent" /etc/sudoers.d/ssh-agent
-  run_cmd sudo visudo -cf /etc/sudoers.d/ssh-agent
+  run_cmd sudo install -Dm440 -o root -g root "$REPO_DIR/etc/sudoers.d/ssh-agent" /etc/sudoers.d/ssh-agent
+  if ! run_cmd sudo visudo -cf /etc/sudoers.d/ssh-agent; then
+    echo "[ERROR] sudoers validation failed for /etc/sudoers.d/ssh-agent; removing it to avoid total sudo breakage." >&2
+    run_cmd sudo rm -f /etc/sudoers.d/ssh-agent
+    exit 1
+  fi
 fi
 if [[ -f "$REPO_DIR/etc/local-sbin/myos-battery-ctl" ]]; then
   run_cmd sudo install -Dm755 -o root -g root "$REPO_DIR/etc/local-sbin/myos-battery-ctl" /usr/local/sbin/myos-battery-ctl
@@ -176,9 +205,30 @@ if [[ -f "$REPO_DIR/etc/ssh/sshd_config.d/01-hardening.conf" ]] && command -v ss
   if [[ -n "${SSH_CONNECTION:-}" ]]; then
     echo "[WARN] Running over SSH; skipping SSHD hardening cutover (intended for local laptop console only)."
   else
+    SSHD_BAK_DIR=""
+    if ! $DRY_RUN; then
+      SSHD_BAK_DIR="$(mktemp -d)"
+      [[ -f /etc/ssh/sshd_config.d/01-hardening.conf ]] && sudo cp -a /etc/ssh/sshd_config.d/01-hardening.conf "$SSHD_BAK_DIR/"
+      [[ -f /etc/ssh/sshd_config.d/50-cloud-init.conf ]] && sudo cp -a /etc/ssh/sshd_config.d/50-cloud-init.conf "$SSHD_BAK_DIR/"
+    fi
     run_cmd sudo rm -f /etc/ssh/sshd_config.d/50-cloud-init.conf
     run_cmd sudo install -Dm644 "$REPO_DIR/etc/ssh/sshd_config.d/01-hardening.conf" /etc/ssh/sshd_config.d/01-hardening.conf
-    run_cmd sudo sshd -t
+    if ! run_cmd sudo sshd -t; then
+      echo "[ERROR] sshd -t failed; restoring previous SSHD config." >&2
+      if ! $DRY_RUN && [[ -n "$SSHD_BAK_DIR" ]]; then
+        if [[ -f "$SSHD_BAK_DIR/01-hardening.conf" ]]; then
+          sudo cp -a "$SSHD_BAK_DIR/01-hardening.conf" /etc/ssh/sshd_config.d/01-hardening.conf
+        else
+          sudo rm -f /etc/ssh/sshd_config.d/01-hardening.conf
+        fi
+        if [[ -f "$SSHD_BAK_DIR/50-cloud-init.conf" ]]; then
+          sudo cp -a "$SSHD_BAK_DIR/50-cloud-init.conf" /etc/ssh/sshd_config.d/50-cloud-init.conf
+        fi
+        rm -rf "$SSHD_BAK_DIR"
+      fi
+      exit 1
+    fi
+    [[ -n "$SSHD_BAK_DIR" ]] && rm -rf "$SSHD_BAK_DIR"
     if systemctl is-active --quiet ssh.service; then
       run_cmd sudo systemctl reload ssh.service
     fi
