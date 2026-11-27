@@ -6,7 +6,7 @@
 
     "modules-left": ["sway/workspaces", "sway/mode"],
     "modules-center": [],
-    "modules-right": ["custom/sec", "custom/net", "clock", "bluetooth", "backlight", "pulseaudio", "battery", "custom/power"],
+    "modules-right": ["custom/sec", "network", "custom/net", "clock", "bluetooth", "backlight", "pulseaudio", "battery", "custom/power"],
 
     "sway/workspaces": {
         "disable-scroll": true,
@@ -22,6 +22,15 @@
         "return-type": "json",
         "interval": 60,
         "on-click": "foot -e sh -c '/opt/myosSweeper/myosSweeper status; read -r _'",
+        "tooltip": false
+    },
+
+    "network": {
+        "interval": 10,
+        "format-wifi": "NET: {essid}",
+        "format-ethernet": "NET: ETH",
+        "format-linked": "NET: NOIP",
+        "format-disconnected": "NET: OFF",
         "tooltip": false
     },
 

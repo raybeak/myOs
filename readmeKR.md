@@ -173,6 +173,7 @@ XF86AudioPlay / Next / Prev                 playerctl play-pause / next / previo
 
 ## 업데이트 이력
 
+- `feat(waybar): add read-only network status module between sec and custom/net`; `2026-11-27 12:10 KST`
 - `feat(gnupg): upscale pinentry-qt dialog 1.25x via QT_SCALE_FACTOR`; `2026-11-27 11:30 KST`
 - `style(ui): upscale Waybar/wofi 1.25x, apply Tokyo Night Storm palette (#1f2335), add fonts-hack, and sync foot/sway/thunar prefs`; `2026-11-27 11:25 KST`
 - `fix(audio): add libspa-0.2-bluetooth and disable WirePlumber BT HFP auto-switch`; `2026-11-24 09:38 KST`

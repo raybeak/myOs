@@ -37,6 +37,8 @@ window#waybar {
 }
 
 #custom-sec,
+#network,
+#custom-net,
 #clock,
 #bluetooth,
 #backlight,
@@ -45,6 +47,10 @@ window#waybar {
 #custom-power {
     padding: 0 13px;
     border-left: 1px solid #3b4261;
+}
+
+#network.disconnected {
+    color: #f7768e;
 }
 
 #pulseaudio.muted {
