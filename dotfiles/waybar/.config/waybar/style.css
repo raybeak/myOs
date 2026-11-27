@@ -1,39 +1,39 @@
-/* ~/.config/waybar/style.css — text-only, monochrome */
+/* ~/.config/waybar/style.css — text-only, Tokyo Night Storm, 1.25x upscaled */
 
 * {
     font-family: "Noto Sans Mono CJK KR", "Fira Code", "D2Coding", monospace;
-    font-size: 20px;
+    font-size: 25px;
     border: none;
     border-radius: 0;
     min-height: 0;
 }
 
 window#waybar {
-    background: #111111;
-    color: #dddddd;
-    border-bottom: 1px solid #333333;
+    background: #1f2335;
+    color: #ffffff;
+    border-bottom: 1px solid #3b4261;
 }
 
 #workspaces button {
-    padding: 0 8px;
-    color: #777777;
+    padding: 0 10px;
+    color: #7aa2f7;
     background: transparent;
 }
 
 #workspaces button.focused {
-    color: #111111;
-    background: #dddddd;
+    color: #ffffff;
+    background: #3d59a1;
 }
 
 #workspaces button.urgent {
-    color: #111111;
-    background: #ff5555;
+    color: #1f2335;
+    background: #f7768e;
 }
 
 #mode {
-    padding: 0 8px;
-    color: #111111;
-    background: #ffcc00;
+    padding: 0 10px;
+    color: #1f2335;
+    background: #e0af68;
 }
 
 #custom-sec,
@@ -43,8 +43,8 @@ window#waybar {
 #pulseaudio,
 #battery,
 #custom-power {
-    padding: 0 10px;
-    border-left: 1px solid #333333;
+    padding: 0 13px;
+    border-left: 1px solid #3b4261;
 }
 
 #pulseaudio.muted {

@@ -75,7 +75,7 @@ sudo reboot
 ### Repository Structure
 
 - `bootstrap.sh`: Idempotent 8-stage installer (`remove.txt` -> `packagesV2.txt` -> external tools -> `stow` -> `/etc` & `UFW` baseline -> `servicesV2.txt` -> `micro` default -> `NetworkManager` cutover).
-- `dotfiles/`: GNU `stow` packages (`sway`, `waybar`, `swaync`, `foot`, `micro`, `fcitx5`, `gnupg`, `myos-bin`, `wireplumber`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0` — all stowed with `--no-folding`).
+- `dotfiles/`: GNU `stow` packages (`sway`, `waybar`, `wofi`, `swaync`, `foot`, `micro`, `fcitx5`, `gnupg`, `myos-bin`, `wireplumber`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0` — all stowed with `--no-folding`).
 - `etc/`: System configs (`greetd/config.toml`, `netplan/01-nm.yaml`, `systemd/zram-generator.conf`, `tlp.d/90-gram.conf`, `sudoers.d/ssh-agent`, `sudoers.d/myos-battery`, `local-sbin/myos-battery-ctl`, `security/authorized_keys`, `ssh/sshd_config.d/01-hardening.conf`, `sysctl.d/99-hardening.conf`).
 - `sweeper/`: Standalone `/` security delta collector, rule floor, local/Tailscale triage, and `systemd` timers.
 - `justfile`: Deterministic read-only verification entrypoint (`just check`: `lint-sh`, `lint-sway`, `eval-sweeper`; `just check-packages`).
@@ -172,6 +172,7 @@ Defined in `justfile` (read-only checks; zero `sudo` or system mutation):
 
 ## Updates
 
+- `style(ui): upscale Waybar/wofi 1.25x, apply Tokyo Night Storm palette (#1f2335), add fonts-hack, and sync foot/sway/thunar prefs`; `2026-11-27 11:25 KST`
 - `fix(audio): add libspa-0.2-bluetooth and disable WirePlumber BT HFP auto-switch`; `2026-11-24 09:38 KST`
 - `feat(flatpak): add flatpak package, Flathub remote, and XDG_DATA_DIRS env`; `2026-11-23 18:24 KST`
 - `docs(readme): add full Korean documentation (readmeKR.md) and link from README.md`; `2026-11-23 18:21 KST`

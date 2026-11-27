@@ -1,0 +1,38 @@
+/* ~/.config/wofi/style.css — Tokyo Night Storm dark navy-gray, white text, 1.25x upscaled */
+
+window {
+    font-family: "Noto Sans Mono CJK KR", "Hack Nerd Font Mono", monospace;
+    font-size: 20px;
+    background-color: #1f2335;
+    color: #ffffff;
+    border: 2px solid #3b4261;
+    border-radius: 0px;
+}
+
+#outer-box {
+    margin: 6px;
+}
+
+#input {
+    margin: 0 0 6px 0;
+    padding: 6px 10px;
+    background-color: #24283b;
+    color: #ffffff;
+    border: 1px solid #3b4261;
+    border-radius: 0px;
+}
+
+#scroll {
+    margin: 0;
+}
+
+#entry {
+    padding: 5px 10px;
+    color: #ffffff;
+    border-radius: 0px;
+}
+
+#entry:selected {
+    background-color: #3d59a1;
+    color: #ffffff;
+}

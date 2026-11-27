@@ -96,6 +96,7 @@ fcitx5-frontend-qt6
 fonts-noto
 fonts-noto-cjk
 fonts-firacode
+fonts-hack   # apt fallback; Hack Nerd Font Mono is installed locally in /usr/local/share/fonts/
 
 # --- codec (ubuntu-restricted-extras 대체, EULA 없음) ---
 ffmpeg
