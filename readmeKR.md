@@ -76,7 +76,7 @@ sudo reboot
 ### 저장소 구조
 
 - `bootstrap.sh`: 멱등적(idempotent) 8단계 설치 스크립트 (`remove.txt` -> `packagesV2.txt` -> 외부 도구 -> `stow` -> `/etc` 및 `UFW` 기본 설정 -> `servicesV2.txt` -> `micro` 기본값 -> `NetworkManager` 전환)
-- `dotfiles/`: GNU `stow` 패키지 (`sway`, `waybar`, `swaync`, `foot`, `micro`, `fcitx5`, `--no-folding` 적용 `gnupg` 및 `myos-bin`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0`)
+- `dotfiles/`: GNU `stow` 패키지 (`sway`, `waybar`, `wofi`, `swaync`, `foot`, `micro`, `fcitx5`, `gnupg`, `myos-bin`, `wireplumber`, `shell`, `btop`, `Thunar`, `gtk-3.0/4.0` — 모두 `--no-folding` 적용)
 - `etc/`: 시스템 설정 (`greetd/config.toml`, `netplan/01-nm.yaml`, `systemd/zram-generator.conf`, `tlp.d/90-gram.conf`, `sudoers.d/ssh-agent`, `sudoers.d/myos-battery`, `local-sbin/myos-battery-ctl`, `security/authorized_keys`, `ssh/sshd_config.d/01-hardening.conf`, `sysctl.d/99-hardening.conf`)
 - `sweeper/`: 독립형 `/` 보안 변경분 수집기, 규칙 기반 판정, 로컬/Tailscale 트리아지, `systemd` 타이머
 - `justfile`: 결정적 읽기 전용 검증 진입점 (`just check`: `lint-sh`, `lint-sway`, `eval-sweeper`; `just check-packages`)
@@ -173,6 +173,9 @@ XF86AudioPlay / Next / Prev                 playerctl play-pause / next / previo
 
 ## 업데이트 이력
 
+- `feat(gnupg): upscale pinentry-qt dialog 1.25x via QT_SCALE_FACTOR`; `2026-11-27 11:30 KST`
+- `style(ui): upscale Waybar/wofi 1.25x, apply Tokyo Night Storm palette (#1f2335), add fonts-hack, and sync foot/sway/thunar prefs`; `2026-11-27 11:25 KST`
+- `fix(audio): add libspa-0.2-bluetooth and disable WirePlumber BT HFP auto-switch`; `2026-11-24 09:38 KST`
 - `feat(flatpak): add flatpak package, Flathub remote, and XDG_DATA_DIRS env`; `2026-11-23 18:24 KST`
 - `docs(readme): add full Korean documentation (readmeKR.md) and link from README.md`; `2026-11-23 18:21 KST`
 - `docs(readme): document justfile verification recipes`; `2026-11-23 12:08 KST`
